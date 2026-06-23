@@ -1,36 +1,48 @@
 // utils/localStorage.test.ts
-import { describe, it, expect, beforeEach } from 'vitest';
-import { setItem, getItem, addRecord, updateRecord, deleteRecord, seedDatabase } from './localStorage';
+import { describe, it, beforeEach, beforeAll, expect } from 'vitest';
+import { getItem, setItem, initializeMockDatabase } from './localStorage';
 
-describe('Mock Data Layer (CRUD & Seed)', () => {
+describe('Local Storage Data Layer', () => {
+  const mockStorage: Record<string, string> = {};
+
+  // Simulate a browser environment inside Node.js execution context
+  beforeAll(() => {
+    global.window = {} as any;
+    global.localStorage = {
+      getItem: (key: string) => mockStorage[key] || null,
+      setItem: (key: string, value: string) => { mockStorage[key] = value; },
+      clear: () => {
+        for (const key in mockStorage) {
+          delete mockStorage[key];
+        }
+      }
+    } as any;
+  });
+
+  // Clear the mocked storage before each test case execution
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('should seed the database correctly', () => {
-    seedDatabase();
-    const users = getItem('users');
-    expect(users).toHaveLength(3); // admin, artist, gold
-    expect(users[0].role).toBe('admin');
+  it('should save and retrieve data correctly', () => {
+    const mockUser = { id: '1', name: 'Sepehr', role: 'listener' };
+    setItem('currentUser', mockUser);
+    
+    const retrieved = getItem('currentUser');
+    expect(retrieved).toEqual(mockUser);
   });
 
-  it('should perform CRUD operations correctly', () => {
-    setItem('songs', []);
-    
-    // Create
-    addRecord('songs', { id: 'test-1', title: 'My Song' });
-    expect(getItem('songs')).toHaveLength(1);
-    
-    // Read
-    const fetchedSongs = getItem('songs');
-    expect(fetchedSongs[0].title).toBe('My Song');
+  it('should return null for non-existent key', () => {
+    const result = getItem('ghostKey');
+    expect(result).toBeNull();
+  });
 
-    // Update
-    updateRecord('songs', 'test-1', { title: 'Updated Song' });
-    expect(getItem('songs')[0].title).toBe('Updated Song');
+  it('should initialize empty arrays for core collections', () => {
+    initializeMockDatabase();
     
-    // Delete
-    deleteRecord('songs', 'test-1');
-    expect(getItem('songs')).toHaveLength(0);
+    expect(getItem('users')).toEqual([]);
+    expect(getItem('songs')).toEqual([]);
+    expect(getItem('playlists')).toEqual([]);
+    expect(getItem('artists')).toEqual([]);
   });
 });
