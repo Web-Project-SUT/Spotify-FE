@@ -9,10 +9,17 @@ vi.mock('../utils/localStorage', () => ({ getItem: vi.fn() }));
 
 afterEach(cleanup);
 
-describe('Advanced Player Features', () => {
+describe('Player Component Comprehensive Tests', () => {
+  
   it('shows stream and listener count for gold users (Task 29)', () => {
     (localStorageUtils.getItem as any).mockImplementation((key: string) => {
-      if (key === 'currentTrack') return { title: 'Song', streamCount: 500, listenerCount: 200 };
+      if (key === 'currentTrack') return { 
+        title: 'Song', 
+        streamCount: 500, 
+        listenerCount: 200, 
+        audioUrlHigh: 'h.mp3', 
+        audioUrlLow: 'l.mp3' 
+      };
       if (key === 'currentUser') return { role: 'gold' };
       return null;
     });
@@ -23,7 +30,12 @@ describe('Advanced Player Features', () => {
 
   it('toggles lyrics display (Task 28)', () => {
     (localStorageUtils.getItem as any).mockImplementation((key: string) => {
-      if (key === 'currentTrack') return { title: 'Song', lyrics: 'Test Lyrics Content' };
+      if (key === 'currentTrack') return { 
+        title: 'Song', 
+        lyrics: 'Test Lyrics Content', 
+        audioUrlHigh: 'h.mp3', 
+        audioUrlLow: 'l.mp3' 
+      };
       return null;
     });
     render(<Player />);
@@ -33,5 +45,25 @@ describe('Advanced Player Features', () => {
     fireEvent.click(lyricsBtns[0]);
     
     expect(screen.getByText('Test Lyrics Content')).toBeDefined();
+  });
+
+  it('renders correctly with full features and quality selector', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return {
+        title: 'Test Song',
+        cover: 'https://test.com/img.jpg',
+        audioUrlHigh: 'high.mp3',
+        audioUrlLow: 'low.mp3',
+        lyrics: 'Sample lyrics'
+      };
+      return null;
+    });
+    render(<Player />);
+    
+    // Verify basic rendering
+    expect(screen.getByText('Test Song')).toBeDefined();
+    
+    // Verify quality selector existence (defaults to HIGH)
+    expect(screen.getByText('HIGH')).toBeDefined();
   });
 });
