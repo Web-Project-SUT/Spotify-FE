@@ -70,8 +70,17 @@ export interface Payout {
   amount: number;
   status: 'paid' | 'pending';
 }
-// utils/types.ts
+
 export interface RevenueData {
   month: string;
   amount: number;
+}
+
+
+export interface GroupSessionData {
+  id: string;
+  hostId: string;
+  members: string[];
+  isPlaying: boolean;
+  progress: number;
 }
