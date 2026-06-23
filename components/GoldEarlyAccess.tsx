@@ -3,17 +3,25 @@
 
 import React, { useEffect, useState } from 'react';
 import { getItem } from '../utils/localStorage';
+import { User } from '../utils/types';
 
 export default function GoldEarlyAccess() {
   const [isGoldUser, setIsGoldUser] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check the current logged-in user's role
-    const currentUser = getItem('currentUser');
+    // Check current user role from the mock database
+    const currentUser: User | null = getItem('currentUser');
+    
     if (currentUser && currentUser.role === 'gold') {
       setIsGoldUser(true);
     }
+    
+    setLoading(false);
   }, []);
+
+  // Do not render anything until the client-side check is complete
+  if (loading) return null;
 
   if (!isGoldUser) {
     return (
@@ -34,12 +42,12 @@ export default function GoldEarlyAccess() {
       </h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[1, 2, 3, 4].map((num) => (
-          <div key={num} className="bg-black p-4 rounded-lg flex flex-col items-center justify-center hover:bg-gray-800 transition cursor-pointer">
-            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">
+          <div key={num} className="bg-black p-4 rounded-lg flex flex-col items-center justify-center hover:bg-gray-800 transition cursor-pointer group">
+            <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner group-hover:scale-105 transition-transform">
               💿
             </div>
-            <p className="text-sm font-bold">Secret Track {num}</p>
-            <p className="text-xs text-yellow-500">Unreleased</p>
+            <p className="text-sm font-bold text-white mt-2">Secret Track {num}</p>
+            <p className="text-xs text-yellow-500 mt-1">Unreleased</p>
           </div>
         ))}
       </div>

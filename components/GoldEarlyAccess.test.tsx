@@ -5,6 +5,7 @@ import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import GoldEarlyAccess from './GoldEarlyAccess';
 import * as localStorageUtils from '../utils/localStorage';
 
+// Mock the local storage utility
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
 }));
@@ -14,12 +15,12 @@ describe('GoldEarlyAccess Component', () => {
     vi.clearAllMocks();
   });
 
-  // 🧹 این بخش اضافه شد تا صفحه بعد از هر تست تمیز شود
   afterEach(() => {
     cleanup();
   });
 
   it('should render the upgrade prompt if user is NOT a gold member', async () => {
+    // Simulate a regular listener user
     (localStorageUtils.getItem as any).mockReturnValue({ role: 'listener' });
 
     render(<GoldEarlyAccess />);
@@ -27,10 +28,12 @@ describe('GoldEarlyAccess Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Unlock Early Access!/i)).toBeDefined();
     });
+    
     expect(screen.getByRole('button', { name: /Upgrade to Gold/i })).toBeDefined();
   });
 
   it('should render the exclusive tracks if user IS a gold member', async () => {
+    // Simulate a logged-in gold user
     (localStorageUtils.getItem as any).mockReturnValue({ role: 'gold' });
 
     render(<GoldEarlyAccess />);
