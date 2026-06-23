@@ -1,14 +1,13 @@
 // components/ArtistRegistrationForm.test.tsx
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import ArtistRegistrationForm from './ArtistRegistrationForm';
 import * as localStorageUtils from '../utils/localStorage';
 
-// Mock the localStorage utility functions so we can monitor them
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
-  setItem: vi.fn(),
+  addRecord: vi.fn(),
 }));
 
 describe('Artist Registration Form', () => {
@@ -16,35 +15,46 @@ describe('Artist Registration Form', () => {
     vi.clearAllMocks();
   });
 
-  it('should submit the form and save the artist with pending status', () => {
-    // Mock getItem to simulate an empty existing users array
-    (localStorageUtils.getItem as any).mockReturnValue([]);
+  afterEach(() => {
+    cleanup();
+  });
 
+  it('should switch between listener and artist tabs', () => {
     render(<ArtistRegistrationForm />);
+    
+    expect(screen.queryByLabelText(/Stage Name/i)).toBeNull();
 
-    // Fill out the input fields
-    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'artist@test.com' } });
-    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'securePass123' } });
-    fireEvent.change(screen.getByLabelText(/Stage Name/i), { target: { value: 'DJ Phantom' } });
-    fireEvent.change(screen.getByLabelText(/Portfolio Link/i), { target: { value: 'https://phantom.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /Artist/i }));
+    expect(screen.getByLabelText(/Stage Name/i)).toBeDefined();
+    expect(screen.getByLabelText(/Upload Sample Work/i)).toBeDefined();
+  });
 
-    // Submit the form
-    fireEvent.click(screen.getByRole('button', { name: /Register/i }));
+  it('should submit artist form and show pending state screen', () => {
+    render(<ArtistRegistrationForm />);
+    
+    fireEvent.click(screen.getByRole('button', { name: /Artist/i }));
 
-    // Assert 1: The success message should be displayed
-    expect(screen.getByText(/Registration successful/i)).toBeDefined();
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'art@test.com' } });
+    fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'pass123' } });
+    fireEvent.change(screen.getByLabelText(/Stage Name/i), { target: { value: 'DJ Cool' } });
+    fireEvent.change(screen.getByLabelText(/Portfolio URL/i), { target: { value: 'https://dj.com' } });
+    
+    const file = new File(['audio'], 'track.mp3', { type: 'audio/mp3' });
+    const fileInput = screen.getByLabelText(/Upload Sample Work/i);
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
-    // Assert 2: setItem should be called with the correct user role and status
-    expect(localStorageUtils.setItem).toHaveBeenCalledWith(
-      'users',
-      expect.arrayContaining([
-        expect.objectContaining({
-          email: 'artist@test.com',
-          stageName: 'DJ Phantom',
-          role: 'artist', // Must be artist
-          status: 'pending', // Must be pending approval
-        }),
-      ])
-    );
+    // 🚀 این بخش تغییر کرد: فرم را مستقیماً سابمیت می‌کنیم
+    const form = screen.getByRole('button', { name: /Submit Artist Application/i }).closest('form');
+    fireEvent.submit(form!);
+
+    expect(localStorageUtils.addRecord).toHaveBeenCalledWith('users', expect.objectContaining({
+      email: 'art@test.com',
+      role: 'artist',
+      status: 'pending',
+      stageName: 'DJ Cool'
+    }));
+
+    expect(screen.getByText(/Application Submitted!/i)).toBeDefined();
+    expect(screen.getByText(/Pending Review/i)).toBeDefined();
   });
 });
