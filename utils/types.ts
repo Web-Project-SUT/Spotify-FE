@@ -23,10 +23,8 @@ export interface Song {
   id: string;
   title: string;
   artistId: string;
-  cover: string;       // Required
-  plays: number;       // Required
-  albumId?: string;
-  url?: string;
+  cover: string;
+  plays: number;
   lyrics?: string;
   streamCount?: number;
   listenerCount?: number;
@@ -34,6 +32,8 @@ export interface Song {
   genre?: string;
   year?: number;
   collaborators?: string[];
+  audioUrlHigh?: string; // Optional
+  audioUrlLow?: string;  // Optional
 }
 
 export interface Album {
@@ -69,4 +69,9 @@ export interface Payout {
   streams: number;
   amount: number;
   status: 'paid' | 'pending';
+}
+// utils/types.ts
+export interface RevenueData {
+  month: string;
+  amount: number;
 }
