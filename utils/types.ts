@@ -1,7 +1,10 @@
 // utils/types.ts
 
+// --- Enums & Basic Types ---
 export type Role = 'listener' | 'artist' | 'gold' | 'admin';
 export type Status = 'active' | 'pending' | 'suspended';
+
+// --- Interfaces ---
 
 export interface User {
   id: string;
@@ -20,10 +23,17 @@ export interface Song {
   id: string;
   title: string;
   artistId: string;
+  cover: string;       // Required
+  plays: number;       // Required
   albumId?: string;
-  cover?: string;
-  plays?: number;
   url?: string;
+  lyrics?: string;
+  streamCount?: number;
+  listenerCount?: number;
+  earnings?: number;
+  genre?: string;
+  year?: number;
+  collaborators?: string[];
 }
 
 export interface Album {
@@ -36,8 +46,8 @@ export interface Album {
 
 export interface Playlist {
   id: string;
-  title: string;
   userId: string;
+  title: string;
   songIds: string[];
   isPublic?: boolean;
 }
@@ -50,24 +60,4 @@ export interface Notification {
   type: 'subscription' | 'release' | 'approval' | 'support';
   isRead: boolean;
   createdAt: string;
-}
-
-export interface Playlist {
-  id: string;
-  userId: string;
-  title: string;
-  songIds: string[];
-  isPublic?: boolean;
-}
-
-// utils/types.ts
-export interface Song {
-  id: string;
-  title: string;
-  artistId: string;
-  cover: string;       // Changed to required
-  plays: number;       // Changed to required
-  lyrics?: string;     
-  streamCount?: number;
-  listenerCount?: number;
 }
