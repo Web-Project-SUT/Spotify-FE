@@ -1,41 +1,63 @@
 // utils/localStorage.ts
+import { User, Song, Album, Playlist } from './types';
 
-/**
- * Safely retrieves and parses an item from localStorage.
- * Prevents "window is not defined" error during Next.js server-side rendering.
- */
-export const getItem = (key: string): any => {
+// Basic Get/Set
+export const getItem = (key: string) => {
   if (typeof window === 'undefined') return null;
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : null;
-  } catch (error) {
-    console.error("Error reading from localStorage:", error);
-    return null;
+  const data = localStorage.getItem(key);
+  return data ? JSON.parse(data) : null;
+};
+
+export const setItem = (key: string, value: any) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
+// CRUD Helpers
+export const addRecord = (collection: string, record: any) => {
+  const data = getItem(collection) || [];
+  data.push(record);
+  setItem(collection, data);
+};
+
+export const updateRecord = (collection: string, id: string, updatedFields: any) => {
+  const data = getItem(collection) || [];
+  const index = data.findIndex((item: any) => item.id === id);
+  if (index !== -1) {
+    data[index] = { ...data[index], ...updatedFields };
+    setItem(collection, data);
   }
 };
 
-/**
- * Safely serializes and saves an item into localStorage.
- * Prevents "window is not defined" error during Next.js server-side rendering.
- */
-export const setItem = (key: string, value: any): void => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (error) {
-    console.error("Error saving to localStorage:", error);
-  }
+export const deleteRecord = (collection: string, id: string) => {
+  const data = getItem(collection) || [];
+  const filtered = data.filter((item: any) => item.id !== id);
+  setItem(collection, filtered);
 };
 
-/**
- * Initializes empty arrays for core collections if they do not exist in storage.
- * Based on core models requested in the project specification.
- */
-export const initializeMockDatabase = (): void => {
-  if (typeof window === 'undefined') return;
-  if (!getItem('users')) setItem('users', []); // Stores listener and artist accounts
-  if (!getItem('songs')) setItem('songs', []); // Stores tracks data
-  if (!getItem('playlists')) setItem('playlists', []); // Stores user playlists
-  if (!getItem('artists')) setItem('artists', []); // Stores approved artist data
+// Seed Data (Initial Mock Data)
+export const seedDatabase = () => {
+  const users: User[] = [
+    { id: 'u1', email: 'admin@test.com', role: 'admin', status: 'active' },
+    { id: 'u2', email: 'artist@test.com', role: 'artist', stageName: 'The Weeknd', status: 'active' },
+    { id: 'u3', email: 'gold@test.com', role: 'gold' },
+  ];
+  
+  const songs: Song[] = [
+    { id: 's1', title: 'Blinding Lights', artistId: 'u2', plays: 5000 },
+    { id: 's2', title: 'Save Your Tears', artistId: 'u2', plays: 3000 },
+  ];
+
+  const albums: Album[] = [
+    { id: 'al1', title: 'After Hours', artistId: 'u2', releaseYear: 2020 }
+  ];
+
+  const playlists: Playlist[] = [
+    { id: 'p1', title: 'Top Hits', userId: 'u1', songIds: ['s1', 's2'], isPublic: true }
+  ];
+
+  setItem('users', users);
+  setItem('songs', songs);
+  setItem('albums', albums);
+  setItem('playlists', playlists);
 };
