@@ -2,27 +2,46 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getItem } from '../utils/localStorage';
+import { getItem, setItem } from '../utils/localStorage';
+import { Song } from '../utils/types';
 
 export default function TopSongsRow() {
-  const [songs, setSongs] = useState<any[]>([]);
+  const [songs, setSongs] = useState<Song[]>([]);
+  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch songs from the mock database
-    const dbSongs = getItem('songs') || [];
+    // Fetch songs from the database
+    const dbSongs: Song[] = getItem('songs') || [];
     
     if (dbSongs.length > 0) {
-      setSongs(dbSongs.slice(0, 5)); // Display the top 5 songs
+      // Sort by most plays and select the top 5
+      const sortedSongs = [...dbSongs].sort((a, b) => (b.plays || 0) - (a.plays || 0));
+      setSongs(sortedSongs.slice(0, 5));
     } else {
-      // If the database is empty, show some dummy fallback data
+      // Dummy data if the database is empty
       setSongs([
-        { id: '1', title: 'Bohemian Rhapsody', artist: 'Queen', cover: '🎸' },
-        { id: '2', title: 'Shape of You', artist: 'Ed Sheeran', cover: '🎧' },
-        { id: '3', title: 'Blinding Lights', artist: 'The Weeknd', cover: '🎵' },
-        { id: '4', title: 'Dance Monkey', artist: 'Tones and I', cover: '🎹' },
+        { id: '1', title: 'Bohemian Rhapsody', artistId: 'Queen', cover: '🎸', plays: 1500000 },
+        { id: '2', title: 'Shape of You', artistId: 'Ed Sheeran', cover: '🎧', plays: 900000 },
       ]);
     }
+
+    // Check if a song is currently playing
+    const currentTrack = getItem('currentTrack');
+    if (currentTrack) {
+      setCurrentPlayingId(currentTrack.id);
+    }
   }, []);
+
+  const handlePlay = (song: Song) => {
+    // Save song as the current track for the music player
+    setItem('currentTrack', song);
+    setCurrentPlayingId(song.id);
+    
+    // Dispatch a storage event to notify the player component across the browser
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
+  };
 
   return (
     <div className="my-8 w-full">
@@ -31,13 +50,26 @@ export default function TopSongsRow() {
         {songs.map((song) => (
           <div 
             key={song.id} 
-            className="min-w-[160px] bg-gray-800 p-4 rounded-lg flex flex-col items-center hover:bg-gray-700 transition cursor-pointer"
+            className="min-w-[160px] bg-gray-800 p-4 rounded-lg flex flex-col items-center hover:bg-gray-700 transition relative group"
           >
-            <div className="w-24 h-24 bg-gray-600 rounded-md flex items-center justify-center text-4xl mb-4 shadow-lg">
+            <div className="w-24 h-24 bg-gray-600 rounded-md flex items-center justify-center text-4xl mb-4 shadow-lg relative overflow-hidden">
               {song.cover || '🎵'}
+              
+              {/* Play button shown only on hover */}
+              <button 
+                onClick={() => handlePlay(song)}
+                aria-label={`Play ${song.title}`}
+                className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-xl ${currentPlayingId === song.id ? 'bg-green-500 text-black' : 'bg-white text-black'}`}>
+                  {currentPlayingId === song.id ? '⏸' : '▶'}
+                </div>
+              </button>
             </div>
             <h3 className="text-white font-semibold truncate w-full text-center">{song.title}</h3>
-            <p className="text-gray-400 text-sm truncate w-full text-center">{song.artist}</p>
+            <p className="text-gray-400 text-xs mt-1 truncate w-full text-center">
+              {song.plays ? `${song.plays.toLocaleString()} plays` : 'Trending'}
+            </p>
           </div>
         ))}
       </div>
