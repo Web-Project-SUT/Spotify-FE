@@ -61,3 +61,12 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+export interface Payout {
+  id: string;
+  artistId: string;
+  artistName: string;
+  listeners: number;
+  streams: number;
+  amount: number;
+  status: 'paid' | 'pending';
+}
