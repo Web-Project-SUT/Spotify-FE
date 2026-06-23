@@ -41,3 +41,13 @@ export interface Playlist {
   songIds: string[];
   isPublic?: boolean;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'subscription' | 'release' | 'approval' | 'support';
+  isRead: boolean;
+  createdAt: string;
+}
