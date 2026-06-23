@@ -59,3 +59,15 @@ export interface Playlist {
   songIds: string[];
   isPublic?: boolean;
 }
+
+// utils/types.ts
+export interface Song {
+  id: string;
+  title: string;
+  artistId: string;
+  cover: string;       // Changed to required
+  plays: number;       // Changed to required
+  lyrics?: string;     
+  streamCount?: number;
+  listenerCount?: number;
+}
