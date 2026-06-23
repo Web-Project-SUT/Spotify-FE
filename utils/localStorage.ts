@@ -1,9 +1,5 @@
 // utils/localStorage.ts
 
-/**
- * Safely retrieves and parses an item from localStorage.
- * Prevents "window is not defined" error during Next.js server-side rendering.
- */
 export const getItem = (key: string): any => {
   if (typeof window === 'undefined') return null;
   try {
@@ -15,10 +11,6 @@ export const getItem = (key: string): any => {
   }
 };
 
-/**
- * Safely serializes and saves an item into localStorage.
- * Prevents "window is not defined" error during Next.js server-side rendering.
- */
 export const setItem = (key: string, value: any): void => {
   if (typeof window === 'undefined') return;
   try {
@@ -28,14 +20,35 @@ export const setItem = (key: string, value: any): void => {
   }
 };
 
-/**
- * Initializes empty arrays for core collections if they do not exist in storage.
- * Based on core models requested in the project specification.
- */
+// --- CRUD Operations ---
+
+export const addRecord = (collection: string, record: any): void => {
+  const data = getItem(collection) || [];
+  data.push(record);
+  setItem(collection, data);
+};
+
+export const updateRecord = (collection: string, id: string, updatedFields: any): void => {
+  const data = getItem(collection) || [];
+  const index = data.findIndex((item: any) => item.id === id);
+  if (index !== -1) {
+    data[index] = { ...data[index], ...updatedFields };
+    setItem(collection, data);
+  }
+};
+
+export const deleteRecord = (collection: string, id: string): void => {
+  const data = getItem(collection) || [];
+  const filteredData = data.filter((item: any) => item.id !== id);
+  setItem(collection, filteredData);
+};
+
+// --- Initialization ---
+
 export const initializeMockDatabase = (): void => {
   if (typeof window === 'undefined') return;
-  if (!getItem('users')) setItem('users', []); // Stores listener and artist accounts
-  if (!getItem('songs')) setItem('songs', []); // Stores tracks data
-  if (!getItem('playlists')) setItem('playlists', []); // Stores user playlists
-  if (!getItem('artists')) setItem('artists', []); // Stores approved artist data
+  if (!getItem('users')) setItem('users', []);
+  if (!getItem('songs')) setItem('songs', []);
+  if (!getItem('playlists')) setItem('playlists', []);
+  if (!getItem('artists')) setItem('artists', []);
 };

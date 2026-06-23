@@ -51,3 +51,11 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+
+export interface Playlist {
+  id: string;
+  userId: string;
+  title: string;
+  songIds: string[];
+  isPublic?: boolean;
+}
