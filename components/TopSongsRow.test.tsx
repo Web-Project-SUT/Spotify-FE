@@ -48,4 +48,19 @@ describe('TopSongsRow Component', () => {
     // Verify if the song was successfully saved in the database for the player to read
     expect(localStorageUtils.setItem).toHaveBeenCalledWith('currentTrack', mockSongs[0]);
   });
+
+  it('shows an empty state instead of fake songs when the catalog is empty', async () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'songs') return [];
+      if (key === 'currentTrack') return null;
+      return null;
+    });
+
+    render(<TopSongsRow />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No songs available yet/i)).toBeDefined();
+    });
+    expect(screen.queryByText('Bohemian Rhapsody')).toBeNull();
+  });
 });
