@@ -1,7 +1,11 @@
 // utils/types.ts
 
 // --- Enums & Basic Types ---
-export type Role = 'listener' | 'artist' | 'gold' | 'admin';
+// Role and subscription Tier are separate axes per the project spec:
+// a listener, artist, support agent, or admin each have their own role,
+// and listeners additionally carry a subscription tier independent of role.
+export type Role = 'listener' | 'artist' | 'support' | 'admin';
+export type Tier = 'basic' | 'silver' | 'gold';
 export type Status = 'active' | 'pending' | 'suspended';
 
 // --- Interfaces ---
@@ -11,11 +15,13 @@ export interface User {
   email: string;
   password?: string;
   role: Role;
+  tier?: Tier; // only meaningful for role === 'listener'
   status?: Status;
   stageName?: string;
   portfolio?: string;
   bio?: string;
   followers?: number;
+  following?: string[]; // ids of artists/users this user follows
   cover?: string;
 }
 
@@ -32,6 +38,8 @@ export interface Song {
   genre?: string;
   year?: number;
   collaborators?: string[];
+  releaseType?: 'single' | 'album';
+  audioFileName?: string; // mock-only; phase 2 replaces this with a real uploaded asset path
   audioUrlHigh?: string; // Optional
   audioUrlLow?: string;  // Optional
 }
@@ -83,4 +91,11 @@ export interface GroupSessionData {
   members: string[];
   isPlaying: boolean;
   progress: number;
+  currentSongId?: string;
+}
+
+// Dynamic pricing set by admins; never hardcoded in components.
+export interface SubscriptionPrices {
+  silver: number;
+  gold: number;
 }
