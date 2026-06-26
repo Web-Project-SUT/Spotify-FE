@@ -1,18 +1,16 @@
 // app/group/page.tsx
 'use client';
-
-import React, { useEffect } from 'react';
-import { initializeMockDatabase } from '../../utils/localStorage';
+import React from 'react';
+import AppShell from '../../components/AppShell';
 import GroupSession from '../../components/GroupSession';
 
 export default function GroupPage() {
-  useEffect(() => {
-    initializeMockDatabase();
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gray-950 p-8 flex justify-center">
-      <GroupSession />
-    </div>
+    <AppShell allow={['listener']}>
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-6">Group session</h1>
+        <GroupSession />
+      </div>
+    </AppShell>
   );
 }
