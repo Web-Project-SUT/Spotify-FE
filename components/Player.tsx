@@ -1,8 +1,10 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getItem, setItem } from '../utils/localStorage';
-import { Song, User } from '../utils/types';
+import { Song } from '../utils/types';
 import { isGoldUser } from '../utils/auth';
+
+type RepeatMode = 'off' | 'all' | 'one';
 
 export default function Player() {
   const [song, setSong] = useState<Song | null>(null);
@@ -10,6 +12,9 @@ export default function Player() {
   const [quality, setQuality] = useState<'high' | 'low'>('high');
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [repeat, setRepeat] = useState<RepeatMode>('off');
+  const [shuffle, setShuffle] = useState(false);
   const [showLyrics, setShowLyrics] = useState(false);
   const [showQueue, setShowQueue] = useState(false);
   const [queue, setQueue] = useState<Song[]>([]);
@@ -22,7 +27,84 @@ export default function Player() {
     setSong(getItem('currentTrack'));
     setIsGold(isGoldUser(getItem('currentUser')));
     setQueue(getItem('queue') || []);
+
+    // Keep the bar in sync when another part of the app changes the track.
+    const onStorage = () => {
+      setSong(getItem('currentTrack'));
+      setQueue(getItem('queue') || []);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      setIsPlaying((p) => !p);
+      return;
+    }
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      audio.play().catch(() => {});
+      setIsPlaying(true);
+    }
+  }, [isPlaying]);
+
+  const pickNext = useCallback(() => {
+    if (queue.length === 0) return null;
+    if (shuffle) {
+      const idx = Math.floor(Math.random() * queue.length);
+      return queue[idx];
+    }
+    return queue[0];
+  }, [queue, shuffle]);
+
+  const next = useCallback(() => {
+    const upcoming = pickNext();
+    if (!upcoming) return;
+    setSong(upcoming);
+    setItem('currentTrack', upcoming);
+    setQueue((prev) => {
+      const updated = prev.filter((s) => s.id !== upcoming.id);
+      setItem('queue', updated);
+      return updated;
+    });
+    setCurrentTime(0);
+  }, [pickNext]);
+
+  const prev = useCallback(() => {
+    // No history stack in the mock; restart the current track instead.
+    if (audioRef.current) audioRef.current.currentTime = 0;
+    setCurrentTime(0);
+  }, []);
+
+  const cycleRepeat = useCallback(() => {
+    setRepeat((r) => (r === 'off' ? 'all' : r === 'all' ? 'one' : 'off'));
+  }, []);
+
+  const handleEnded = useCallback(() => {
+    if (repeat === 'one') {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+      return;
+    }
+    if (queue.length > 0) {
+      next();
+      return;
+    }
+    if (repeat === 'all' && song) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+      }
+      return;
+    }
+    setIsPlaying(false);
+  }, [repeat, queue.length, next, song]);
 
   const extractColor = () => {
     if (!imgRef.current) return;
@@ -80,22 +162,52 @@ export default function Player() {
           </div>
         </div>
 
-        <div className="flex-1 flex items-center gap-2 px-4">
-          <span className="text-xs">
-            {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
-          </span>
-          <input
-            type="range"
-            min="0"
-            max={duration || 0}
-            value={currentTime}
-            onChange={(e) => audioRef.current && (audioRef.current.currentTime = Number(e.target.value))}
-            className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
-            aria-label="Seek"
-          />
-          <span className="text-xs">
-            {Math.floor((duration || 0) / 60)}:{Math.floor((duration || 0) % 60).toString().padStart(2, '0')}
-          </span>
+        <div className="flex-1 flex flex-col items-center gap-1 px-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShuffle((s) => !s)}
+              aria-label="Shuffle"
+              aria-pressed={shuffle}
+              className={`text-sm ${shuffle ? 'text-black bg-white/90 rounded-full w-7 h-7' : 'text-white/80'}`}
+              title="Shuffle"
+            >
+              🔀
+            </button>
+            <button onClick={prev} aria-label="Previous" className="text-lg">⏮</button>
+            <button
+              onClick={togglePlay}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+              className="bg-white text-black rounded-full w-9 h-9 flex items-center justify-center text-lg"
+            >
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+            <button onClick={next} aria-label="Next" className="text-lg" disabled={queue.length === 0}>⏭</button>
+            <button
+              onClick={cycleRepeat}
+              aria-label={`Repeat ${repeat}`}
+              className={`text-sm ${repeat !== 'off' ? 'text-black bg-white/90 rounded-full w-7 h-7' : 'text-white/80'}`}
+              title={`Repeat: ${repeat}`}
+            >
+              {repeat === 'one' ? '🔂' : '🔁'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 w-full">
+            <span className="text-xs">
+              {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
+            </span>
+            <input
+              type="range"
+              min="0"
+              max={duration || 0}
+              value={currentTime}
+              onChange={(e) => audioRef.current && (audioRef.current.currentTime = Number(e.target.value))}
+              className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+              aria-label="Seek"
+            />
+            <span className="text-xs">
+              {Math.floor((duration || 0) / 60)}:{Math.floor((duration || 0) % 60).toString().padStart(2, '0')}
+            </span>
+          </div>
         </div>
 
         <div className="flex gap-4">
@@ -120,6 +232,9 @@ export default function Player() {
         src={quality === 'high' ? song.audioUrlHigh : song.audioUrlLow}
         onTimeUpdate={() => audioRef.current && setCurrentTime(audioRef.current.currentTime)}
         onLoadedMetadata={() => audioRef.current && setDuration(audioRef.current.duration)}
+        onEnded={handleEnded}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
       />
 
       {showQueue && (
