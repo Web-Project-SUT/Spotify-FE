@@ -37,12 +37,27 @@ describe('Local Storage Data Layer', () => {
     expect(result).toBeNull();
   });
 
-  it('should initialize empty arrays for core collections', () => {
+  it('should seed core collections with demo data on initialization', () => {
     initializeMockDatabase();
-    
-    expect(getItem('users')).toEqual([]);
-    expect(getItem('songs')).toEqual([]);
+
+    const users = getItem('users');
+    const songs = getItem('songs');
+    expect(Array.isArray(users)).toBe(true);
+    expect(users.length).toBeGreaterThan(0);
+    expect(Array.isArray(songs)).toBe(true);
+    expect(songs.length).toBeGreaterThan(0);
+
+    // Playlists start empty (users create their own); artists collection
+    // is initialized for later use.
     expect(getItem('playlists')).toEqual([]);
     expect(getItem('artists')).toEqual([]);
+  });
+
+  it('should not overwrite existing collections on re-initialization', () => {
+    setItem('users', [{ id: 'custom', email: 'x@y.z', role: 'listener' }]);
+    initializeMockDatabase();
+
+    const users = getItem('users');
+    expect(users).toEqual([{ id: 'custom', email: 'x@y.z', role: 'listener' }]);
   });
 });
