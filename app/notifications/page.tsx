@@ -1,18 +1,16 @@
 // app/notifications/page.tsx
 'use client';
-
-import React, { useEffect } from 'react';
-import { initializeMockDatabase } from '../../utils/localStorage';
+import React from 'react';
+import AppShell from '../../components/AppShell';
 import NotificationPanel from '../../components/NotificationPanel';
 
 export default function NotificationsPage() {
-  useEffect(() => {
-    initializeMockDatabase();
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8 flex justify-center">
-      <NotificationPanel />
-    </div>
+    <AppShell>
+      <div className="p-8">
+        <h1 className="text-2xl font-bold mb-6">Notifications</h1>
+        <NotificationPanel />
+      </div>
+    </AppShell>
   );
 }
