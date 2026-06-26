@@ -127,4 +127,45 @@ describe('Player', () => {
     expect(screen.getByText('Test Song')).toBeDefined();
     expect(screen.getByText('HIGH')).toBeDefined();
   });
+
+  it('exposes play, previous, next, repeat, and shuffle controls', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      if (key === 'queue') return [];
+      return null;
+    });
+    render(<Player />);
+
+    expect(screen.getByLabelText('Play')).toBeDefined();
+    expect(screen.getByLabelText('Previous')).toBeDefined();
+    expect(screen.getByLabelText('Next')).toBeDefined();
+    expect(screen.getByLabelText('Shuffle')).toBeDefined();
+    expect(screen.getByLabelText(/Repeat/)).toBeDefined();
+  });
+
+  it('cycles repeat mode off -> all -> one -> off', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      return null;
+    });
+    render(<Player />);
+
+    expect(screen.getByLabelText('Repeat off')).toBeDefined();
+    fireEvent.click(screen.getByLabelText('Repeat off'));
+    expect(screen.getByLabelText('Repeat all')).toBeDefined();
+    fireEvent.click(screen.getByLabelText('Repeat all'));
+    expect(screen.getByLabelText('Repeat one')).toBeDefined();
+  });
+
+  it('toggles play/pause label', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      return null;
+    });
+    render(<Player />);
+
+    expect(screen.getByLabelText('Play')).toBeDefined();
+    fireEvent.click(screen.getByLabelText('Play'));
+    expect(screen.getByLabelText('Pause')).toBeDefined();
+  });
 });
