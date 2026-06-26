@@ -12,18 +12,11 @@ export default function TopSongsRow() {
   useEffect(() => {
     // Fetch songs from the database
     const dbSongs: Song[] = getItem('songs') || [];
-    
-    if (dbSongs.length > 0) {
-      // Sort by most plays and select the top 5
-      const sortedSongs = [...dbSongs].sort((a, b) => (b.plays || 0) - (a.plays || 0));
-      setSongs(sortedSongs.slice(0, 5));
-    } else {
-      // Dummy data if the database is empty
-      setSongs([
-        { id: '1', title: 'Bohemian Rhapsody', artistId: 'Queen', cover: '🎸', plays: 1500000 },
-        { id: '2', title: 'Shape of You', artistId: 'Ed Sheeran', cover: '🎧', plays: 900000 },
-      ]);
-    }
+
+    // Sort by most plays and select the top 5. No fake fallback data —
+    // an empty catalog should render an empty state, not made-up songs.
+    const sortedSongs = [...dbSongs].sort((a, b) => (b.plays || 0) - (a.plays || 0));
+    setSongs(sortedSongs.slice(0, 5));
 
     // Check if a song is currently playing
     const currentTrack = getItem('currentTrack');
@@ -46,7 +39,10 @@ export default function TopSongsRow() {
   return (
     <div className="my-8 w-full">
       <h2 className="text-2xl font-bold mb-4 text-white">Top Songs</h2>
-      <div className="flex overflow-x-auto space-x-4 pb-4">
+      {songs.length === 0 ? (
+        <p className="text-gray-500 italic">No songs available yet.</p>
+      ) : (
+        <div className="flex overflow-x-auto space-x-4 pb-4">
         {songs.map((song) => (
           <div 
             key={song.id} 
@@ -72,7 +68,8 @@ export default function TopSongsRow() {
             </p>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
