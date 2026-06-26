@@ -1,23 +1,36 @@
 // app/home/page.tsx
 'use client';
 
-import React, { useEffect } from 'react';
-import { initializeMockDatabase } from '../../utils/localStorage';
+import React from 'react';
+import AppShell from '../../components/AppShell';
+import { useAuth } from '../../context/AuthContext';
+import { Avatar } from '../../components/ui';
 import TopSongsRow from '../../components/TopSongsRow';
 import GoldEarlyAccess from '../../components/GoldEarlyAccess';
 import RecommendationEngine from '../../components/RecommendationEngine';
 
-export default function HomePage() {
-  useEffect(() => {
-    initializeMockDatabase();
-  }, []);
-
+function HomeContent() {
+  const { user } = useAuth();
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-8 pb-32">
-      <h1 className="text-3xl font-bold mb-6">Home</h1>
+    <div className="p-8">
+      <div className="flex items-center gap-3 mb-8">
+        <Avatar src={user?.cover} name={user?.stageName || user?.email} size={48} />
+        <div>
+          <p className="text-muted text-sm">Welcome back</p>
+          <h1 className="text-2xl font-bold">{user?.stageName || user?.email}</h1>
+        </div>
+      </div>
       <GoldEarlyAccess />
       <TopSongsRow />
       <RecommendationEngine />
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <AppShell allow={['listener']}>
+      <HomeContent />
+    </AppShell>
   );
 }
