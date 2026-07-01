@@ -69,8 +69,11 @@ The role → landing route map lives once in `utils/auth.ts` as `ROLE_HOME` / `g
 `app/page.tsx` and `app/login/page.tsx` call `getRoleHome` to redirect a logged-in user to their role-specific
 landing page — reuse this helper rather than re-declaring a role map. `/login` validates email format and
 required fields (per-field errors via the `Input` primitive's `error` prop), redirects already-authenticated
-users to their role home, and links to `/forgot-password`, a mock recovery route that just confirms an email
-was "sent" (no real email/network in Phase 1).
+users to their role home, and links to `/forgot-password`. That recovery route mirrors the same auth-page
+patterns: it shares `EMAIL_RE` from `utils/auth.ts` for email validation, redirects already-authenticated
+users to their role home via `getRoleHome`, and on a valid submit shows a mocked async "sending" state (the
+`<Spinner>` primitive) before a success screen that just confirms an email was "sent" — no real email/network
+in Phase 1.
 
 **`/register`** hosts both listener and artist sign-up (tabbed). The listener form collects display name,
 email, password + confirm, DOB, gender, and privacy-policy acceptance (modal), validates per-field like
