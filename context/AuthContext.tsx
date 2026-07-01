@@ -1,7 +1,7 @@
 // context/AuthContext.tsx
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { getItem, setItem, addRecord, initializeMockDatabase } from '../utils/localStorage';
+import { getItem, setItem, addRecord, deleteRecord, initializeMockDatabase } from '../utils/localStorage';
 import { User, Role, Tier } from '../utils/types';
 
 interface RegisterListenerInput {
@@ -24,6 +24,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => User | null;
   logout: () => void;
+  deleteAccount: () => void;
   registerListener: (input: RegisterListenerInput) => User;
   registerArtist: (input: RegisterArtistInput) => User;
   refresh: () => void;
@@ -59,9 +60,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    if (typeof window !== 'undefined') localStorage.removeItem('currentUser');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('currentTrack');
+      localStorage.removeItem('queue');
+      // The native 'storage' event only fires in other tabs; dispatch it
+      // manually so Player (which listens for it) clears itself here too.
+      window.dispatchEvent(new StorageEvent('storage', { key: 'currentTrack' }));
+    }
     setUser(null);
   }, []);
+
+  // Removes the account from the users collection, then logs out.
+  const deleteAccount = useCallback(() => {
+    if (user) deleteRecord('users', user.id);
+    logout();
+  }, [user, logout]);
 
   const registerListener = useCallback((input: RegisterListenerInput): User => {
     const newUser: User = {
@@ -98,7 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, registerListener, registerArtist, refresh }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, logout, deleteAccount, registerListener, registerArtist, refresh }}
+    >
       {children}
     </AuthContext.Provider>
   );

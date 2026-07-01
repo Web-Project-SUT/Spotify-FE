@@ -48,7 +48,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-60 bg-surface flex-shrink-0 flex flex-col h-screen sticky top-0 p-4">
+    <aside className="w-60 bg-surface flex-shrink-0 flex flex-col h-screen sticky top-0 p-4 overflow-y-auto">
       <div className="flex items-center gap-2 px-2 mb-6">
         <span className="text-accent text-2xl">●</span>
         <span className="font-bold text-lg">Streamr</span>
