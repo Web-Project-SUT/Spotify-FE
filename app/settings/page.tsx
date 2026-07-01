@@ -9,7 +9,7 @@ import { SubscriptionPrices } from '../../utils/types';
 import { Button, Badge } from '../../components/ui';
 
 function SettingsContent() {
-  const { user, logout } = useAuth();
+  const { user, deleteAccount } = useAuth();
   const router = useRouter();
   const [notifLimit, setNotifLimit] = useState(true);
   const [volume, setVolume] = useState(70);
@@ -31,9 +31,9 @@ function SettingsContent() {
     setItem('userPrefs', merged);
   };
 
-  const deleteAccount = () => {
+  const handleDeleteAccount = () => {
     if (confirm('Delete your account? This cannot be undone.')) {
-      logout();
+      deleteAccount();
       router.push('/login');
     }
   };
@@ -106,7 +106,7 @@ function SettingsContent() {
 
       <section className="bg-surface-2 p-6 rounded-lg">
         <h2 className="font-bold mb-3">Danger zone</h2>
-        <Button variant="danger" onClick={deleteAccount}>
+        <Button variant="danger" onClick={handleDeleteAccount}>
           Delete account
         </Button>
       </section>
