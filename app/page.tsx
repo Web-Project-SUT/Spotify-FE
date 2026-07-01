@@ -4,13 +4,7 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { Spinner } from '../components/ui';
-
-const roleHome: Record<string, string> = {
-  listener: '/home',
-  artist: '/artist-panel',
-  support: '/support',
-  admin: '/dashboard',
-};
+import { getRoleHome } from '../utils/auth';
 
 export default function RootPage() {
   const { user, loading } = useAuth();
@@ -18,7 +12,7 @@ export default function RootPage() {
 
   useEffect(() => {
     if (loading) return;
-    router.replace(user ? roleHome[user.role] || '/home' : '/login');
+    router.replace(getRoleHome(user));
   }, [user, loading, router]);
 
   return (

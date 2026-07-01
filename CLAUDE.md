@@ -64,8 +64,13 @@ no `tier`.
 **Route protection:** pages that require auth wrap their content in `<AppShell allow={[...roles]}>`
 (`components/AppShell.tsx`), which renders the `Sidebar` + a `<ProtectedRoute>` boundary. `ProtectedRoute`
 redirects unauthenticated users to `/login` and redirects users whose role isn't in `allow` back to `/home`.
-The root `app/page.tsx` redirects a logged-in user to a role-specific landing page
-(`listener → /home`, `artist → /artist-panel`, `support → /support`, `admin → /dashboard`).
+The role → landing route map lives once in `utils/auth.ts` as `ROLE_HOME` / `getRoleHome(user)`
+(`listener → /home`, `artist → /artist-panel`, `support → /support`, `admin → /dashboard`); both the root
+`app/page.tsx` and `app/login/page.tsx` call `getRoleHome` to redirect a logged-in user to their role-specific
+landing page — reuse this helper rather than re-declaring a role map. `/login` validates email format and
+required fields (per-field errors via the `Input` primitive's `error` prop), redirects already-authenticated
+users to their role home, and links to `/forgot-password`, a mock recovery route that just confirms an email
+was "sent" (no real email/network in Phase 1).
 
 **Player is global, not page-scoped:** `<Player>` and `<ServiceWorkerRegister>` are mounted once in
 `app/layout.tsx` (outside any route), so the player bar persists across navigation. It reads/writes

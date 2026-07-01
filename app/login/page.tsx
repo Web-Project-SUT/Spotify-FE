@@ -1,83 +1,100 @@
 // app/login/page.tsx
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input } from '../../components/ui';
+import { getRoleHome } from '../../utils/auth';
 
-const roleHome: Record<string, string> = {
-  listener: '/home',
-  artist: '/artist-panel',
-  support: '/support',
-  admin: '/dashboard',
-};
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user, loading } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [showForgot, setShowForgot] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [authError, setAuthError] = useState('');
 
-  const handleLogin = () => {
-    setError('');
-    const user = login(email, password);
-    if (!user) {
-      setError('No account found with those credentials.');
-      return;
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace(getRoleHome(user));
     }
-    router.push(roleHome[user.role] || '/home');
+  }, [user, loading, router]);
+
+  const validate = (): FieldErrors => {
+    const errors: FieldErrors = {};
+    if (!email.trim()) {
+      errors.email = 'Email is required.';
+    } else if (!EMAIL_RE.test(email)) {
+      errors.email = 'Enter a valid email address.';
+    }
+    if (!password) {
+      errors.password = 'Password is required.';
+    }
+    return errors;
   };
 
-  if (showForgot) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-surface rounded-lg p-8 space-y-4">
-          <h1 className="text-2xl font-bold text-center">Reset password</h1>
-          <p className="text-muted text-sm text-center">
-            Enter your email and we&apos;ll send recovery instructions.
-          </p>
-          <Input label="Email" name="recovery-email" type="email" placeholder="you@example.com" />
-          <Button className="w-full" onClick={() => setShowForgot(false)}>
-            Send recovery link
-          </Button>
-          <button onClick={() => setShowForgot(false)} className="text-muted text-sm w-full hover:text-white">
-            Back to login
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errors = validate();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setAuthError('');
+    const loggedInUser = login(email, password);
+    if (!loggedInUser) {
+      setAuthError('No account found with those credentials.');
+      return;
+    }
+    router.replace(getRoleHome(loggedInUser));
+  };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-surface rounded-lg p-8 space-y-4">
         <h1 className="text-2xl font-bold text-center">Log in</h1>
-        {error && <p className="text-danger text-sm text-center">{error}</p>}
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-        />
-        <Input
-          label="Password"
-          name="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-        />
-        <button onClick={() => setShowForgot(true)} className="text-accent text-sm hover:underline">
-          Forgot password?
-        </button>
-        <Button className="w-full" onClick={handleLogin}>
-          Log in
-        </Button>
+        {authError && <p className="text-danger text-sm text-center">{authError}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              setAuthError('');
+            }}
+            error={fieldErrors.email}
+            placeholder="you@example.com"
+          />
+          <Input
+            label="Password"
+            name="password"
+            type="password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              setAuthError('');
+            }}
+            error={fieldErrors.password}
+            placeholder="••••••••"
+          />
+          <Link href="/forgot-password" className="text-accent text-sm hover:underline inline-block">
+            Forgot password?
+          </Link>
+          <Button type="submit" className="w-full">
+            Log in
+          </Button>
+        </form>
         <p className="text-muted text-sm text-center">
           No account?{' '}
           <Link href="/register" className="text-white hover:underline">

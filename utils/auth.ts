@@ -4,11 +4,22 @@
 // and comparing role/tier directly, so the rules only live in one place.
 
 import { getItem } from './localStorage';
-import { User, Tier } from './types';
+import { User, Role, Tier } from './types';
 
 export const getCurrentUser = (): User | null => {
   return getItem('currentUser');
 };
+
+export const ROLE_HOME: Record<Role, string> = {
+  listener: '/home',
+  artist: '/artist-panel',
+  support: '/support',
+  admin: '/dashboard',
+};
+
+// Where a user should land after login / when hitting the root or /login while authed.
+export const getRoleHome = (user: User | null): string =>
+  user ? ROLE_HOME[user.role] : '/login';
 
 export const isGoldUser = (user: User | null = getCurrentUser()): boolean => {
   return !!user && user.role === 'listener' && user.tier === 'gold';
