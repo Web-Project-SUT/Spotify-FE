@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { Role } from '../utils/types';
+import { Spinner } from './ui';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -27,7 +28,11 @@ export default function ProtectedRoute({ children, allow }: ProtectedRouteProps)
   }, [user, loading, allow, router]);
 
   if (loading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center text-muted">Loading…</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Spinner size={32} />
+      </div>
+    );
   }
   if (!user) return null;
   if (allow && !allow.includes(user.role)) return null;

@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { Spinner } from '../components/ui';
 
 const roleHome: Record<string, string> = {
   listener: '/home',
@@ -21,8 +22,8 @@ export default function RootPage() {
   }, [user, loading, router]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center text-muted">
-      Loading…
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <Spinner size={32} />
     </div>
   );
 }
