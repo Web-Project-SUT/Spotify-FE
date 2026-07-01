@@ -72,9 +72,9 @@ export default function Sidebar() {
 
       <div className="border-t border-border pt-4 mt-4">
         <Link href={user.role === 'listener' ? '/profile' : '#'} className="flex items-center gap-2 mb-3">
-          <Avatar src={user.cover} name={user.stageName || user.email} size={36} />
+          <Avatar src={user.cover} name={user.displayName || user.stageName || user.email} size={36} />
           <div className="min-w-0">
-            <p className="text-sm font-bold truncate">{user.stageName || user.email}</p>
+            <p className="text-sm font-bold truncate">{user.displayName || user.stageName || user.email}</p>
             <div className="mt-0.5">
               {user.role === 'listener' ? tierBadge[user.tier || 'basic'] : <Badge tone="info">{user.role}</Badge>}
             </div>

@@ -2,14 +2,31 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getItem, setItem, addRecord, deleteRecord, initializeMockDatabase } from '../utils/localStorage';
-import { User, Role, Tier } from '../utils/types';
+import { User, Role, Tier, Gender } from '../utils/types';
 
 interface RegisterListenerInput {
   displayName: string;
   email: string;
   password: string;
   birthDate?: string;
-  gender?: string;
+  gender?: Gender;
+}
+
+// Slugifies the display name and appends a random suffix, retrying on
+// collision so the generated username stays unique within `users`.
+function generateUsername(displayName: string, existing: User[]): string {
+  const base =
+    displayName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'user';
+  const taken = new Set(existing.map((u) => u.username).filter(Boolean));
+  let candidate = '';
+  do {
+    candidate = `${base}_${Math.random().toString(36).slice(2, 7)}`;
+  } while (taken.has(candidate));
+  return candidate;
 }
 
 interface RegisterArtistInput {
@@ -78,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, logout]);
 
   const registerListener = useCallback((input: RegisterListenerInput): User => {
+    const existing: User[] = getItem('users') || [];
     const newUser: User = {
       id: `u-${Date.now()}`,
       email: input.email,
@@ -85,7 +103,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: 'listener' as Role,
       tier: 'basic' as Tier,
       status: 'active',
-      stageName: input.displayName,
+      displayName: input.displayName,
+      username: generateUsername(input.displayName, existing),
+      birthDate: input.birthDate,
+      gender: input.gender,
       followers: 0,
       following: [],
     };

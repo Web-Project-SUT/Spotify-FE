@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input } from '../../components/ui';
-import { getRoleHome } from '../../utils/auth';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { getRoleHome, EMAIL_RE } from '../../utils/auth';
 
 interface FieldErrors {
   email?: string;

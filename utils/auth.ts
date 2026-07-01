@@ -6,6 +6,9 @@
 import { getItem } from './localStorage';
 import { User, Role, Tier } from './types';
 
+// Shared across /login and /register so email validation stays in sync.
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const getCurrentUser = (): User | null => {
   return getItem('currentUser');
 };

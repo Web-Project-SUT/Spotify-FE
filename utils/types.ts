@@ -7,6 +7,7 @@
 export type Role = 'listener' | 'artist' | 'support' | 'admin';
 export type Tier = 'basic' | 'silver' | 'gold';
 export type Status = 'active' | 'pending' | 'suspended';
+export type Gender = 'male' | 'female' | 'other';
 
 // --- Interfaces ---
 
@@ -17,7 +18,11 @@ export interface User {
   role: Role;
   tier?: Tier; // only meaningful for role === 'listener'
   status?: Status;
-  stageName?: string;
+  stageName?: string; // artist-only display name
+  displayName?: string; // listener's chosen name; distinct from system-assigned username
+  username?: string; // system-assigned handle, e.g. 'nova_ray_8f3k'
+  birthDate?: string; // ISO yyyy-mm-dd from the <input type="date">
+  gender?: Gender; // omitted when "prefer not to say"
   portfolio?: string;
   bio?: string;
   followers?: number;
