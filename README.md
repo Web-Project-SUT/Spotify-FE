@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Streamr — Music Streaming Frontend (Phase 1)
 
-## Getting Started
+A frontend-only mock of a Spotify-style music streaming service, built with Next.js (App Router), React, and
+TypeScript for a Sharif University web programming course project. This is **Phase 1**: the frontend and its
+mock data layer only — there is no backend yet. All data (users, songs, playlists, notifications, etc.) is
+seeded into and persisted via the browser's `localStorage`. Phase 2 will add a Django backend and connect it
+to this frontend.
 
-First, run the development server:
+## Requirements
+
+- Node.js 20+
+- npm (or yarn/pnpm/bun)
+
+## Getting started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the app. You'll be redirected to
+`/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Demo accounts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Since there's no real backend yet, login only checks email against a set of seeded mock accounts (any
+password works):
 
-## Learn More
+| Email | Role |
+|---|---|
+| `listener@demo.com` | Listener — basic tier |
+| `silver@demo.com` | Listener — silver tier |
+| `gold@demo.com` | Listener — gold tier |
+| `nova@demo.com` | Artist (approved) |
+| `support@demo.com` | Support agent |
+| `admin@demo.com` | System admin |
 
-To learn more about Next.js, take a look at the following resources:
+You can also register a new listener or artist account from `/register`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Other commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run build      # production build
+npm start           # run the production build (after `npm run build`)
+npm run lint         # run ESLint
+npm test            # run the test suite (Vitest)
+npx tsc --noEmit    # typecheck without emitting output
+```
 
-## Deploy on Vercel
+## Tech stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [Next.js](https://nextjs.org) (App Router) + React + TypeScript
+- Tailwind CSS
+- Vitest + Testing Library for tests
+- `localStorage` as the mock data/persistence layer for Phase 1
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `CLAUDE.md` for a deeper look at the architecture and project requirements.

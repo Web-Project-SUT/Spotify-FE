@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { getItem, updateRecord } from '../utils/localStorage';
 import { User, Song, Album } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
+import { Spinner } from './ui';
 
 interface ArtistProfileProps {
   artistId: string;
@@ -60,7 +61,11 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
   };
 
   if (!artist) {
-    return <div className="p-10 text-white font-bold text-center">Loading artist profile...</div>;
+    return (
+      <div className="p-10 flex items-center justify-center">
+        <Spinner size={32} label="Loading artist profile…" />
+      </div>
+    );
   }
 
   // Gold insights are derived from this artist's real song data rather

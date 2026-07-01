@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Button, Input, Badge, Avatar, EmptyState } from './index';
+import { Button, Input, Badge, Avatar, EmptyState, Spinner } from './index';
 
 afterEach(cleanup);
 
@@ -47,5 +47,19 @@ describe('UI primitives', () => {
     expect(screen.getByText('Nothing here')).toBeDefined();
     expect(screen.getByText('Add something')).toBeDefined();
     expect(screen.getByText('Add')).toBeDefined();
+  });
+
+  it('Spinner exposes a status role and accessible label', () => {
+    render(<Spinner label="Loading tracks…" />);
+    expect(screen.getByRole('status')).toBeDefined();
+    expect(screen.getByText('Loading tracks…')).toBeDefined();
+  });
+
+  it('Spinner applies a custom size', () => {
+    const { container } = render(<Spinner size={48} />);
+    const ring = container.querySelector('span.animate-spin') as HTMLElement;
+    expect(ring).not.toBeNull();
+    expect(ring.style.width).toBe('48px');
+    expect(ring.style.height).toBe('48px');
   });
 });

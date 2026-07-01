@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens — single source of truth for the app's palette.
+ * Semantic names (not raw hex) are what components should reference, via the
+ * Tailwind classes bound in the @theme block below (e.g. bg-surface-2,
+ * text-muted, bg-accent, border-border). Do not hardcode hex values in
+ * components; add/adjust colors here so a Phase 2 restyle stays centralized.
+ *
+ *   background   page backdrop (pure black, Spotify-style)
+ *   surface      base card/panel surface
+ *   surface-2    slightly raised surface (cards, inputs)
+ *   surface-3    hover / control surface
+ *   foreground   primary text
+ *   muted        secondary / placeholder text
+ *   accent       brand green (primary actions)
+ *   accent-hover accent hover state
+ *   border       hairline borders
+ *   danger       errors / destructive actions
+ */
 :root {
   --background: #000000;
   --surface: #121212;
@@ -32,6 +50,36 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/*
+ * Typography scale — sensible heading defaults so pages don't each re-declare
+ * sizes/weights. Override per-instance with Tailwind text-* utilities when a
+ * design calls for it.
+ */
+@layer base {
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  h4 {
+    font-size: 1rem;
+    line-height: 1.4;
+    font-weight: 600;
+  }
 }
 
 /* Thin scrollbars to match the music-app aesthetic */
