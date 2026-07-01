@@ -72,6 +72,16 @@ required fields (per-field errors via the `Input` primitive's `error` prop), red
 users to their role home, and links to `/forgot-password`, a mock recovery route that just confirms an email
 was "sent" (no real email/network in Phase 1).
 
+**`/register`** hosts both listener and artist sign-up (tabbed). The listener form collects display name,
+email, password + confirm, DOB, gender, and privacy-policy acceptance (modal), validates per-field like
+`/login` (shared `EMAIL_RE` from `utils/auth.ts`, duplicate-email guard against the `users` collection), and
+redirects to `/home` on success; it also redirects already-authenticated users to their role home. The artist
+tab is unchanged (email, password, stage name, portfolio → "Pending Approval"). `registerListener` in
+`AuthContext` persists `displayName` plus a **system-assigned `username`** (slugified + uniquified, distinct
+from display name) and `birthDate`/`gender` — see the `Gender` type and the new `User` fields in
+`utils/types.ts`. Listener display name no longer overloads the artist-only `stageName` field; components that
+render a user's name (`Sidebar`, `/home`, `/profile`) prefer `displayName`, falling back to `stageName`/`email`.
+
 **Player is global, not page-scoped:** `<Player>` and `<ServiceWorkerRegister>` are mounted once in
 `app/layout.tsx` (outside any route), so the player bar persists across navigation. It reads/writes
 `currentTrack` and `queue` in localStorage and re-syncs on the browser `storage` event — this is also the

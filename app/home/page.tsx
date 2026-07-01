@@ -14,10 +14,10 @@ function HomeContent() {
   return (
     <div className="p-8">
       <div className="flex items-center gap-3 mb-8">
-        <Avatar src={user?.cover} name={user?.stageName || user?.email} size={48} />
+        <Avatar src={user?.cover} name={user?.displayName || user?.stageName || user?.email} size={48} />
         <div>
           <p className="text-muted text-sm">Welcome back</p>
-          <h1 className="text-2xl font-bold">{user?.stageName || user?.email}</h1>
+          <h1 className="text-2xl font-bold">{user?.displayName || user?.stageName || user?.email}</h1>
         </div>
       </div>
       <GoldEarlyAccess />

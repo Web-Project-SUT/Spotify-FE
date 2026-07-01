@@ -10,7 +10,7 @@ import { Avatar, Badge, Button, Input } from '../../components/ui';
 function ProfileContent() {
   const { user, refresh } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(user?.stageName || '');
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [email, setEmail] = useState(user?.email || '');
 
   if (!user) return null;
@@ -18,8 +18,8 @@ function ProfileContent() {
   const canChangeAvatar = tier !== 'basic';
 
   const save = () => {
-    const updated = { ...user, stageName: displayName, email };
-    updateRecord('users', user.id, { stageName: displayName, email });
+    const updated = { ...user, displayName, email };
+    updateRecord('users', user.id, { displayName, email });
     setItem('currentUser', updated);
     refresh();
     setEditing(false);
@@ -28,10 +28,10 @@ function ProfileContent() {
   return (
     <div className="p-8 max-w-2xl">
       <div className="flex items-center gap-6 mb-8">
-        <Avatar src={user.cover} name={user.stageName || user.email} size={96} />
+        <Avatar src={user.cover} name={user.displayName || user.email} size={96} />
         <div>
-          <h1 className="text-3xl font-bold">{user.stageName || 'Listener'}</h1>
-          <p className="text-muted">@{user.id}</p>
+          <h1 className="text-3xl font-bold">{user.displayName || 'Listener'}</h1>
+          <p className="text-muted">@{user.username || user.id}</p>
           <div className="mt-2">
             {tier === 'gold' ? <Badge tone="gold">Gold</Badge> : tier === 'silver' ? <Badge tone="silver">Silver</Badge> : <Badge>Free</Badge>}
           </div>
