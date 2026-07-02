@@ -43,6 +43,27 @@ export const deleteRecord = (collection: string, id: string): void => {
   setItem(collection, filteredData);
 };
 
+// --- Daily stream stats ---
+// `listeningStats` is keyed by userId, then by local calendar day (YYYY-MM-DD),
+// so the profile page can show "tracks streamed today" without scanning history.
+
+const todayKey = (): string => new Date().toISOString().slice(0, 10);
+
+export const recordDailyStream = (userId: string | undefined | null): void => {
+  if (!userId) return;
+  const stats = getItem('listeningStats') || {};
+  const day = todayKey();
+  const perUser = stats[userId] || {};
+  perUser[day] = (perUser[day] || 0) + 1;
+  stats[userId] = perUser;
+  setItem('listeningStats', stats);
+};
+
+export const getDailyStreams = (userId: string): number => {
+  const stats = getItem('listeningStats') || {};
+  return stats[userId]?.[todayKey()] || 0;
+};
+
 // --- Initialization ---
 
 export const initializeMockDatabase = (): void => {
@@ -116,5 +137,12 @@ export const initializeMockDatabase = (): void => {
 
   if (!getItem('listeningHistory')) {
     setItem('listeningHistory', ['song1', 'song2']);
+  }
+
+  if (!getItem('listeningStats')) {
+    setItem('listeningStats', {
+      u1: { [new Date().toISOString().slice(0, 10)]: 12 },
+      u3: { [new Date().toISOString().slice(0, 10)]: 47 },
+    });
   }
 };

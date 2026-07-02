@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getItem, setItem } from '../utils/localStorage';
+import { getItem, setItem, recordDailyStream } from '../utils/localStorage';
 import { Song } from '../utils/types';
-import { isGoldUser } from '../utils/auth';
+import { isGoldUser, getCurrentUser } from '../utils/auth';
 
 type RepeatMode = 'off' | 'all' | 'one';
 
@@ -36,6 +36,15 @@ export default function Player() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  // Count one daily stream for the current listener each time a new track
+  // becomes current. Keyed on the song id so re-renders (or resuming the
+  // same track) don't double-count. This is the single write point that
+  // feeds the "Streams today" stat on the profile page.
+  useEffect(() => {
+    if (!song?.id) return;
+    recordDailyStream(getCurrentUser()?.id);
+  }, [song?.id]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;

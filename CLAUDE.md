@@ -44,10 +44,13 @@ data — check `node_modules/next/dist/docs/` before relying on remembered API/c
 **No backend, no fetch calls.** Every "data layer" operation goes through `utils/localStorage.ts`
 (`getItem`/`setItem`/`addRecord`/`updateRecord`/`deleteRecord` against named collections: `users`, `songs`,
 `albums`, `playlists`, `notifications`, `payouts`, `revenueData`, `subscriptionPrices`, `tickets`,
-`listeningHistory`, `currentUser`, `currentTrack`, `queue`, `groupSession`). `initializeMockDatabase()` seeds
-all of these on first load (called from `AuthContext`'s mount effect) — check the seed data there for demo
-accounts and mock content shape. This localStorage layer is the intended seam for swapping in real HTTP calls
-in Phase 2, so keep components reading/writing through it rather than hardcoding data inline.
+`listeningHistory`, `listeningStats`, `currentUser`, `currentTrack`, `queue`, `groupSession`).
+`initializeMockDatabase()` seeds all of these on first load (called from `AuthContext`'s mount effect) — check
+the seed data there for demo accounts and mock content shape. This localStorage layer is the intended seam for
+swapping in real HTTP calls in Phase 2, so keep components reading/writing through it rather than hardcoding
+data inline. `listeningStats` is keyed `{ [userId]: { [YYYY-MM-DD]: count } }` and is the source of truth for
+the profile's "streams today" stat — write to it via `recordDailyStream(userId)` and read via
+`getDailyStreams(userId)` rather than touching the collection directly.
 
 **Auth is a client-side mock**, not real security: `AuthContext` (`context/AuthContext.tsx`) holds the current
 `User` in React state, backed by the `currentUser` localStorage key. `login()` just matches email
@@ -85,6 +88,17 @@ from display name) and `birthDate`/`gender` — see the `Gender` type and the ne
 `utils/types.ts`. Listener display name no longer overloads the artist-only `stageName` field; components that
 render a user's name (`Sidebar`, `/home`, `/profile`) prefer `displayName`, falling back to `stageName`/`email`.
 
+**User profile** is one shared component, `components/UserProfile.tsx`, rendered by two routes — `app/profile`
+(own profile, `AppShell allow={['listener']}`, passes the logged-in `user.id`) and the dynamic
+`app/profile/[id]` (any user, mirrors `app/artist/[id]`) — so own-profile and other-user views never diverge.
+It shows avatar, display name, `@username`, tier badge, and a follower/following/streams-today stat grid
+(streams-today comes from `getDailyStreams`). When the viewer is looking at their **own** profile it shows the
+**Edit** form (display name/email; avatar upload gated to silver+ via `getTier`, matching the Phase-2 limits
+table); on **another** user's profile it shows a **Follow/Unfollow** button. Follow writes go through the
+shared `toggleFollow(viewer, targetId, targetFollowers)` helper in `utils/follow.ts`, which bumps the target's
+`followers` and updates the viewer's `following[]` in one place — `ArtistProfile.tsx` uses the same helper, so
+don't re-derive follower/following mutations inline in either component.
+
 **Home page** (`app/home/page.tsx`) renders `LatestAlbumsRow` (the "latest published albums" showcase from the spec) above `TopSongsRow`; it loads the `albums` collection, sorts by `releaseYear` descending, and slices to 8 cards. `LatestAlbumsRow` reuses the album-card + artist-link pattern from `AlbumsBrowse.tsx` — card click → `/album/[id]`, artist-name button (with `stopPropagation`) → `/artist/[id]`. The empty state uses `EmptyState` with a `💿` icon (no CTA, since listeners don't publish albums).
 
 **Player is global, not page-scoped:** `<Player>` and `<ServiceWorkerRegister>` are mounted once in
@@ -92,7 +106,10 @@ render a user's name (`Sidebar`, `/home`, `/profile`) prefer `displayName`, fall
 `currentTrack` and `queue` in localStorage and re-syncs on the browser `storage` event — this is also the
 mechanism `GroupSession` uses to fake real-time sync across tabs (see below), so changes to the
 localStorage key names used by the player must stay consistent across `Player.tsx`, `GroupSession.tsx`, and
-any page that starts playback (e.g. `AlbumsBrowse`, album/artist pages).
+any page that starts playback (e.g. `AlbumsBrowse`, album/artist pages). The player is also the single write
+point for the daily-stream stat: a `useEffect` keyed on the current song's id calls
+`recordDailyStream(getCurrentUser()?.id)` once per new track (resuming the same track doesn't double-count),
+which feeds the profile page's "streams today" number.
 
 **Home page** (`app/home/page.tsx`) renders `RecentPlaylistsRow` (the "last listened-to playlists" showcase
 from the spec) above `TopSongsRow`; it shows only playlists that have an actual `Playlist.lastPlayedAt`

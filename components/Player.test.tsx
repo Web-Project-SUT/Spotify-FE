@@ -8,6 +8,7 @@ import * as localStorageUtils from '../utils/localStorage';
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
+  recordDailyStream: vi.fn(),
 }));
 
 afterEach(cleanup);
