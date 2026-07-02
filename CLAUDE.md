@@ -93,14 +93,21 @@ localStorage key names used by the player must stay consistent across `Player.ts
 any page that starts playback (e.g. `AlbumsBrowse`, album/artist pages).
 
 **Home page** (`app/home/page.tsx`) renders `RecentPlaylistsRow` (the "last listened-to playlists" showcase
-from the spec) above `TopSongsRow`; it orders the current listener's playlists by the optional
-`Playlist.lastPlayedAt` timestamp (recently-played first, unplayed playlists falling back to reverse creation
-order), reusing the `getCurrentUser` + ownership-filter pattern from `PlaylistManager.tsx`. Clicking a card
-navigates to `app/playlist/[id]/page.tsx`, the per-playlist detail route (mirrors `app/album/[id]/page.tsx`):
-it resolves `songIds` to `Song`s, and playing any track stamps `lastPlayedAt` via
-`updateRecord('playlists', id, { lastPlayedAt })` in addition to the usual `currentTrack` + `storage` event
-playback handoff (see below). `/playlists` remains the playlist manager (create/rename/delete);
+from the spec) above `TopSongsRow`; it shows only playlists that have an actual `Playlist.lastPlayedAt`
+timestamp (most-recently-played first) — a playlist with no plays yet (including one that was just created)
+never appears here, even if it has songs, reusing the `getCurrentUser` + ownership-filter pattern from
+`PlaylistManager.tsx`. Clicking a card navigates to `app/playlist/[id]/page.tsx`, the per-playlist detail
+route (mirrors `app/album/[id]/page.tsx`): it resolves `songIds` to `Song`s and renders them as track cards
+(cover/title/artist, click → player, click artist → artist profile), and playing any track stamps
+`lastPlayedAt` via `updateRecord('playlists', id, { lastPlayedAt })` in addition to the usual `currentTrack` +
+`storage` event playback handoff (see below). `/playlists` remains the playlist manager (create/rename/delete);
 `/playlist/[id]` is the read/play view.
+
+**Adding a track to a playlist** goes through `components/AddToPlaylistMenu.tsx`, a small "+" dropdown that
+lists the current user's playlists with a checkmark for ones already containing the track and toggles
+membership (add/remove) via `updateRecord('playlists', id, { songIds })` on click. It's mounted on every
+track card: `AlbumsBrowse` (the `/albums` browse page), `app/album/[id]/page.tsx`'s track rows, and
+`app/playlist/[id]/page.tsx`'s own track cards (where toggling the current playlist off removes the track).
 
 **"Real-time" features are simulated via the `storage` event, not sockets.** `components/GroupSession.tsx`
 persists `GroupSessionData` under the `groupSession` key and listens for cross-tab `storage` events to fake

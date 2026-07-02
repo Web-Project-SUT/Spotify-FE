@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { getItem, addRecord, deleteRecord } from '../utils/localStorage';
 import { Playlist, User } from '../utils/types';
 import { getCurrentUser, getPlaylistLimit, getTier } from '../utils/auth';
@@ -86,7 +87,9 @@ export default function PlaylistManager() {
         <ul className="space-y-2">
           {playlists.map((p) => (
             <li key={p.id} className="flex justify-between items-center bg-gray-800 p-3 rounded">
-              {p.title}
+              <Link href={`/playlist/${p.id}`} className="hover:underline flex-1 mr-2">
+                {p.title}
+              </Link>
               <button onClick={() => handleDelete(p.id)} className="text-red-400 text-sm">
                 Delete
               </button>
