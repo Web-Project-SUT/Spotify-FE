@@ -85,6 +85,8 @@ from display name) and `birthDate`/`gender` — see the `Gender` type and the ne
 `utils/types.ts`. Listener display name no longer overloads the artist-only `stageName` field; components that
 render a user's name (`Sidebar`, `/home`, `/profile`) prefer `displayName`, falling back to `stageName`/`email`.
 
+**Home page** (`app/home/page.tsx`) renders `LatestAlbumsRow` (the "latest published albums" showcase from the spec) above `TopSongsRow`; it loads the `albums` collection, sorts by `releaseYear` descending, and slices to 8 cards. `LatestAlbumsRow` reuses the album-card + artist-link pattern from `AlbumsBrowse.tsx` — card click → `/album/[id]`, artist-name button (with `stopPropagation`) → `/artist/[id]`. The empty state uses `EmptyState` with a `💿` icon (no CTA, since listeners don't publish albums).
+
 **Player is global, not page-scoped:** `<Player>` and `<ServiceWorkerRegister>` are mounted once in
 `app/layout.tsx` (outside any route), so the player bar persists across navigation. It reads/writes
 `currentTrack` and `queue` in localStorage and re-syncs on the browser `storage` event — this is also the
