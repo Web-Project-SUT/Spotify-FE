@@ -63,6 +63,7 @@ export interface Playlist {
   title: string;
   songIds: string[];
   isPublic?: boolean;
+  lastPlayedAt?: string; // ISO timestamp; set when the playlist is played
 }
 
 export interface Notification {

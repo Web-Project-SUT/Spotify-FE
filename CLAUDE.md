@@ -92,6 +92,16 @@ mechanism `GroupSession` uses to fake real-time sync across tabs (see below), so
 localStorage key names used by the player must stay consistent across `Player.tsx`, `GroupSession.tsx`, and
 any page that starts playback (e.g. `AlbumsBrowse`, album/artist pages).
 
+**Home page** (`app/home/page.tsx`) renders `RecentPlaylistsRow` (the "last listened-to playlists" showcase
+from the spec) above `TopSongsRow`; it orders the current listener's playlists by the optional
+`Playlist.lastPlayedAt` timestamp (recently-played first, unplayed playlists falling back to reverse creation
+order), reusing the `getCurrentUser` + ownership-filter pattern from `PlaylistManager.tsx`. Clicking a card
+navigates to `app/playlist/[id]/page.tsx`, the per-playlist detail route (mirrors `app/album/[id]/page.tsx`):
+it resolves `songIds` to `Song`s, and playing any track stamps `lastPlayedAt` via
+`updateRecord('playlists', id, { lastPlayedAt })` in addition to the usual `currentTrack` + `storage` event
+playback handoff (see below). `/playlists` remains the playlist manager (create/rename/delete);
+`/playlist/[id]` is the read/play view.
+
 **"Real-time" features are simulated via the `storage` event, not sockets.** `components/GroupSession.tsx`
 persists `GroupSessionData` under the `groupSession` key and listens for cross-tab `storage` events to fake
 synced playback state; this only works across tabs in one browser, not across devices/users, and is expected
@@ -135,8 +145,8 @@ to keep in mind when touching related code:
   checkbox (clicking "privacy" opens the policy text); artist registration is a separate form (email,
   password, artistic name, sample works) that lands in "Pending Approval" status until a supporter/admin
   approves or rejects it.
-- **Home**: shows the user's display name + avatar, recently listened playlists, latest albums, most-played
-  tracks, and — gold users only — an "Early Access" section.
+- **Home**: shows the user's display name + avatar, recently listened playlists (`RecentPlaylistsRow`, see
+  Architecture above), latest albums, most-played tracks, and — gold users only — an "Early Access" section.
 - **User profile**: personal info, system-assigned username, avatar, tier, follower/following counts, daily
   stream stats, follow/unfollow, and editable fields (profile picture upload is gated to silver+ in Phase 2).
 - **Artist profile**: bio, full discography (albums + singles), a "Verified Artist" badge for approved
