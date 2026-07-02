@@ -2,12 +2,18 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getItem, updateRecord, setItem, getDailyStreams } from '../utils/localStorage';
+import {
+  getItem,
+  updateRecord,
+  setItem,
+  getDailyStreams,
+  initializeMockDatabase,
+} from '../utils/localStorage';
 import { getCurrentUser, getTier } from '../utils/auth';
 import { toggleFollow } from '../utils/follow';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../utils/types';
-import { Avatar, Badge, Button, Input, Spinner } from './ui';
+import { Avatar, Badge, Button, EmptyState, Input, Spinner } from './ui';
 
 interface UserProfileProps {
   userId: string;
@@ -16,6 +22,7 @@ interface UserProfileProps {
 export default function UserProfile({ userId }: UserProfileProps) {
   const { refresh } = useAuth();
   const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [viewer, setViewer] = useState<User | null>(null);
   const [dailyStreams, setDailyStreams] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -25,11 +32,17 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [email, setEmail] = useState('');
 
   useEffect(() => {
+    // Seed defensively: React runs this child effect before the parent
+    // page / AuthProvider effect, so on a direct load the collections may
+    // not exist yet. initializeMockDatabase is a no-op once seeded.
+    initializeMockDatabase();
+
     const users: User[] = getItem('users') || [];
     const found = users.find((u) => u.id === userId) || null;
     const current = getCurrentUser();
 
     setProfileUser(found);
+    setNotFound(!found);
     setViewer(current);
     setDailyStreams(getDailyStreams(userId));
     setIsFollowing(!!current?.following?.includes(userId));
@@ -38,6 +51,14 @@ export default function UserProfile({ userId }: UserProfileProps) {
       setEmail(found.email || '');
     }
   }, [userId]);
+
+  if (notFound) {
+    return (
+      <div className="p-10">
+        <EmptyState icon="🙈" title="User not found" description={`No user exists with id "${userId}".`} />
+      </div>
+    );
+  }
 
   if (!profileUser) {
     return (

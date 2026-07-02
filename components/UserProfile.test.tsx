@@ -10,6 +10,7 @@ vi.mock('../utils/localStorage', () => ({
   updateRecord: vi.fn(),
   setItem: vi.fn(),
   getDailyStreams: vi.fn(),
+  initializeMockDatabase: vi.fn(),
 }));
 
 vi.mock('../context/AuthContext', () => ({
@@ -122,6 +123,16 @@ describe('UserProfile', () => {
     expect(screen.getByRole('button', { name: /^Follow$/i })).toBeDefined();
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u2', { followers: 10 });
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', { following: ['a1'] });
+  });
+
+  it('shows a not-found state when no user matches the id', async () => {
+    mockDb([basicSelf], basicSelf);
+
+    render(<UserProfile userId="does-not-exist" />);
+
+    await waitFor(() => expect(screen.getByText(/User not found/i)).toBeDefined());
+    expect(screen.queryByRole('button', { name: /Edit profile/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Follow$/i })).toBeNull();
   });
 
   it('shows Following when the viewer already follows the target', async () => {
