@@ -63,6 +63,7 @@ export interface Playlist {
   title: string;
   songIds: string[];
   isPublic?: boolean;
+  lastPlayedAt?: string;
 }
 
 export interface Notification {
