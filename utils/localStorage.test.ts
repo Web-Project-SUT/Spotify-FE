@@ -1,6 +1,12 @@
 // utils/localStorage.test.ts
 import { describe, it, beforeEach, beforeAll, expect } from 'vitest';
-import { getItem, setItem, initializeMockDatabase } from './localStorage';
+import {
+  getItem,
+  setItem,
+  initializeMockDatabase,
+  recordDailyStream,
+  getDailyStreams,
+} from './localStorage';
 import { Playlist } from './types';
 
 describe('Local Storage Data Layer', () => {
@@ -64,5 +70,32 @@ describe('Local Storage Data Layer', () => {
 
     const users = getItem('users');
     expect(users).toEqual([{ id: 'custom', email: 'x@y.z', role: 'listener' }]);
+  });
+
+  describe('daily stream stats', () => {
+    it('returns 0 for a user with no recorded streams', () => {
+      expect(getDailyStreams('nobody')).toBe(0);
+    });
+
+    it('increments today’s bucket on each recordDailyStream call', () => {
+      recordDailyStream('u1');
+      recordDailyStream('u1');
+      recordDailyStream('u1');
+      expect(getDailyStreams('u1')).toBe(3);
+    });
+
+    it('tracks users independently', () => {
+      recordDailyStream('u1');
+      recordDailyStream('u2');
+      recordDailyStream('u2');
+      expect(getDailyStreams('u1')).toBe(1);
+      expect(getDailyStreams('u2')).toBe(2);
+    });
+
+    it('is a no-op for a missing user id', () => {
+      recordDailyStream(undefined);
+      recordDailyStream(null);
+      expect(getItem('listeningStats')).toBeNull();
+    });
   });
 });

@@ -2,9 +2,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getItem, updateRecord } from '../utils/localStorage';
+import { getItem } from '../utils/localStorage';
 import { User, Song, Album } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
+import { toggleFollow } from '../utils/follow';
 import { Spinner } from './ui';
 
 interface ArtistProfileProps {
@@ -39,25 +40,10 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
   const handleFollowToggle = () => {
     if (!artist || !currentUser) return;
 
-    const willFollow = !isFollowing;
-    setIsFollowing(willFollow);
-
-    const newFollowers = willFollow
-      ? (artist.followers || 0) + 1
-      : Math.max(0, (artist.followers || 0) - 1);
-    const updatedArtist = { ...artist, followers: newFollowers };
-    setArtist(updatedArtist);
-    updateRecord('users', artist.id, { followers: newFollowers });
-
-    // Track the relationship on the follower's record too, so it
-    // persists correctly per-user instead of just a global counter.
-    const existingFollowing = currentUser.following || [];
-    const updatedFollowing = willFollow
-      ? [...existingFollowing, artistId]
-      : existingFollowing.filter((id) => id !== artistId);
-    const updatedCurrentUser = { ...currentUser, following: updatedFollowing };
-    setCurrentUser(updatedCurrentUser);
-    updateRecord('users', currentUser.id, { following: updatedFollowing });
+    const result = toggleFollow(currentUser, artistId, artist.followers || 0);
+    setIsFollowing(result.isFollowing);
+    setArtist({ ...artist, followers: result.followers });
+    setCurrentUser({ ...currentUser, following: result.following });
   };
 
   if (!artist) {
