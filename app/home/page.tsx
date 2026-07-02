@@ -8,6 +8,7 @@ import { Avatar } from '../../components/ui';
 import TopSongsRow from '../../components/TopSongsRow';
 import GoldEarlyAccess from '../../components/GoldEarlyAccess';
 import RecommendationEngine from '../../components/RecommendationEngine';
+import RecentPlaylistsRow from '../../components/RecentPlaylistsRow';
 
 function HomeContent() {
   const { user } = useAuth();
@@ -21,6 +22,7 @@ function HomeContent() {
         </div>
       </div>
       <GoldEarlyAccess />
+      <RecentPlaylistsRow />
       <TopSongsRow />
       <RecommendationEngine />
     </div>

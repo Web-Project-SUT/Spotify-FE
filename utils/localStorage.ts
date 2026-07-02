@@ -77,7 +77,12 @@ export const initializeMockDatabase = (): void => {
     ]);
   }
 
-  if (!getItem('playlists')) setItem('playlists', []);
+  if (!getItem('playlists')) {
+    setItem('playlists', [
+      { id: 'pl1', userId: 'u1', title: 'Chill Mix', songIds: ['song1', 'song3'], lastPlayedAt: new Date().toISOString() },
+      { id: 'pl2', userId: 'u1', title: 'Late Night Drift', songIds: ['song2', 'song4'] },
+    ]);
+  }
   if (!getItem('artists')) setItem('artists', []);
 
   if (!getItem('notifications')) {

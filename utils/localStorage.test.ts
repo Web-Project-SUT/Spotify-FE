@@ -1,6 +1,7 @@
 // utils/localStorage.test.ts
 import { describe, it, beforeEach, beforeAll, expect } from 'vitest';
 import { getItem, setItem, initializeMockDatabase } from './localStorage';
+import { Playlist } from './types';
 
 describe('Local Storage Data Layer', () => {
   const mockStorage: Record<string, string> = {};
@@ -47,9 +48,13 @@ describe('Local Storage Data Layer', () => {
     expect(Array.isArray(songs)).toBe(true);
     expect(songs.length).toBeGreaterThan(0);
 
-    // Playlists start empty (users create their own); artists collection
-    // is initialized for later use.
-    expect(getItem('playlists')).toEqual([]);
+    // A couple of demo playlists are seeded for the demo listener (u1) so the
+    // home page's recent-playlists row is demoable out of the box; artists
+    // collection starts empty and is initialized for later use.
+    const playlists: Playlist[] = getItem('playlists');
+    expect(Array.isArray(playlists)).toBe(true);
+    expect(playlists.length).toBeGreaterThan(0);
+    expect(playlists.every((p) => p.userId === 'u1')).toBe(true);
     expect(getItem('artists')).toEqual([]);
   });
 
