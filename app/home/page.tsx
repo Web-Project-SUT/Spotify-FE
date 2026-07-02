@@ -9,6 +9,7 @@ import TopSongsRow from '../../components/TopSongsRow';
 import GoldEarlyAccess from '../../components/GoldEarlyAccess';
 import RecommendationEngine from '../../components/RecommendationEngine';
 import RecentPlaylistsRow from '../../components/RecentPlaylistsRow';
+import LatestAlbumsRow from '../../components/LatestAlbumsRow';
 
 function HomeContent() {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ function HomeContent() {
       </div>
       <GoldEarlyAccess />
       <RecentPlaylistsRow />
+      <LatestAlbumsRow />
       <TopSongsRow />
       <RecommendationEngine />
     </div>
