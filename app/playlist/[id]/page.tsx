@@ -4,14 +4,16 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../../components/AppShell';
 import { getItem, setItem, updateRecord } from '../../../utils/localStorage';
-import { Playlist, Song } from '../../../utils/types';
-import { Button, EmptyState } from '../../../components/ui';
+import { Playlist, Song, User } from '../../../utils/types';
+import { Button, Card, EmptyState } from '../../../components/ui';
+import AddToPlaylistMenu from '../../../components/AddToPlaylistMenu';
 
 function PlaylistContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Song[]>([]);
+  const [artists, setArtists] = useState<Record<string, string>>({});
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -23,6 +25,13 @@ function PlaylistContent() {
     if (found) {
       const songs: Song[] = getItem('songs') || [];
       setTracks(found.songIds.map((id) => songs.find((s) => s.id === id)).filter((s): s is Song => !!s));
+
+      const users: User[] = getItem('users') || [];
+      const map: Record<string, string> = {};
+      users.forEach((u) => {
+        if (u.role === 'artist') map[u.id] = u.stageName || 'Unknown artist';
+      });
+      setArtists(map);
     }
   }, [params.id]);
 
@@ -33,6 +42,11 @@ function PlaylistContent() {
       updateRecord('playlists', playlist.id, { lastPlayedAt: new Date().toISOString() });
     }
     router.push('/player');
+  };
+
+  const goToArtist = (e: React.MouseEvent, artistId: string) => {
+    e.stopPropagation();
+    router.push(`/artist/${artistId}`);
   };
 
   if (notFound) {
@@ -65,17 +79,23 @@ function PlaylistContent() {
           action={<Button onClick={() => router.push('/albums')}>Browse songs</Button>}
         />
       ) : (
-        <div className="space-y-1">
-          {tracks.map((song, i) => (
-            <div
-              key={song.id}
-              onClick={() => play(song)}
-              className="flex items-center gap-4 p-3 rounded hover:bg-surface-2 cursor-pointer"
-            >
-              <span className="text-muted w-6 text-right">{i + 1}</span>
-              <span className="flex-1 font-medium">{song.title}</span>
-              <span className="text-muted text-sm">{(song.plays || 0).toLocaleString()} plays</span>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {tracks.map((song) => (
+            <Card key={song.id} hoverable onClick={() => play(song)} className="relative">
+              <div className="absolute top-2 right-2">
+                <AddToPlaylistMenu songId={song.id} />
+              </div>
+              <div className="aspect-square bg-surface-3 rounded mb-3 flex items-center justify-center text-5xl">
+                {song.cover && song.cover.length <= 2 ? song.cover : '🎵'}
+              </div>
+              <p className="font-bold truncate">{song.title}</p>
+              <button
+                onClick={(e) => goToArtist(e, song.artistId)}
+                className="text-muted text-sm hover:underline truncate block"
+              >
+                {artists[song.artistId] || 'Unknown artist'}
+              </button>
+            </Card>
           ))}
         </div>
       )}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getItem, setItem } from '../utils/localStorage';
 import { Song, Album, User } from '../utils/types';
 import { Card, EmptyState } from './ui';
+import AddToPlaylistMenu from './AddToPlaylistMenu';
 
 type SortKey = 'listeners' | 'date';
 
@@ -118,7 +119,10 @@ export default function AlbumsBrowse() {
               <h2 className="text-xl font-bold mb-4">Singles</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredSongs.map((song) => (
-                  <Card key={song.id} hoverable onClick={() => playSong(song)}>
+                  <Card key={song.id} hoverable onClick={() => playSong(song)} className="relative">
+                    <div className="absolute top-2 right-2">
+                      <AddToPlaylistMenu songId={song.id} />
+                    </div>
                     <div className="aspect-square bg-surface-3 rounded mb-3 flex items-center justify-center text-5xl">
                       {song.cover && song.cover.length <= 2 ? song.cover : '🎵'}
                     </div>

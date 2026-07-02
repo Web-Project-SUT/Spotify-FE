@@ -11,24 +11,22 @@ import { Card, EmptyState, Button } from './ui';
 const MAX_PLAYLISTS = 8;
 
 function sortByRecency(playlists: Playlist[]): Playlist[] {
-  const played = playlists.filter((p) => p.lastPlayedAt);
-  const unplayed = playlists.filter((p) => !p.lastPlayedAt);
-
-  played.sort((a, b) => new Date(b.lastPlayedAt!).getTime() - new Date(a.lastPlayedAt!).getTime());
-  unplayed.reverse();
-
-  return [...played, ...unplayed];
+  return playlists
+    .filter((p) => p.lastPlayedAt)
+    .sort((a, b) => new Date(b.lastPlayedAt!).getTime() - new Date(a.lastPlayedAt!).getTime());
 }
 
 export default function RecentPlaylistsRow() {
   const router = useRouter();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [hasAnyPlaylists, setHasAnyPlaylists] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const currentUser = getCurrentUser();
     const allPlaylists: Playlist[] = getItem('playlists') || [];
     const ownPlaylists = currentUser ? allPlaylists.filter((p) => p.userId === currentUser.id) : [];
+    setHasAnyPlaylists(ownPlaylists.length > 0);
     setPlaylists(sortByRecency(ownPlaylists).slice(0, MAX_PLAYLISTS));
     setLoaded(true);
   }, []);
@@ -39,12 +37,21 @@ export default function RecentPlaylistsRow() {
     <div className="my-8 w-full">
       <h2 className="text-2xl font-bold mb-4">Recently played</h2>
       {playlists.length === 0 ? (
-        <EmptyState
-          icon="🎵"
-          title="No playlists yet"
-          description="Create a playlist to see it here."
-          action={<Button onClick={() => router.push('/playlists')}>Create your first playlist</Button>}
-        />
+        hasAnyPlaylists ? (
+          <EmptyState
+            icon="🎵"
+            title="Nothing played recently"
+            description="Play a song from one of your playlists to see it here."
+            action={<Button onClick={() => router.push('/playlists')}>Go to your playlists</Button>}
+          />
+        ) : (
+          <EmptyState
+            icon="🎵"
+            title="No playlists yet"
+            description="Create a playlist to see it here."
+            action={<Button onClick={() => router.push('/playlists')}>Create your first playlist</Button>}
+          />
+        )
       ) : (
         <div className="flex overflow-x-auto space-x-4 pb-4">
           {playlists.map((playlist) => (

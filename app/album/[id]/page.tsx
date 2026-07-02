@@ -6,6 +6,7 @@ import AppShell from '../../../components/AppShell';
 import { getItem, setItem } from '../../../utils/localStorage';
 import { Album, Song, User } from '../../../utils/types';
 import { Button, EmptyState } from '../../../components/ui';
+import AddToPlaylistMenu from '../../../components/AddToPlaylistMenu';
 
 function AlbumContent() {
   const params = useParams<{ id: string }>();
@@ -69,6 +70,7 @@ function AlbumContent() {
               <span className="text-muted w-6 text-right">{i + 1}</span>
               <span className="flex-1 font-medium">{song.title}</span>
               <span className="text-muted text-sm">{(song.plays || 0).toLocaleString()} plays</span>
+              <AddToPlaylistMenu songId={song.id} />
             </div>
           ))}
         </div>

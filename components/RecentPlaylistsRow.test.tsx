@@ -18,13 +18,13 @@ describe('RecentPlaylistsRow', () => {
 
   afterEach(() => cleanup());
 
-  it('renders only the current user\'s playlists', async () => {
+  it('renders only the current user\'s played playlists', async () => {
     (auth.getCurrentUser as any).mockReturnValue({ id: 'u1', role: 'listener' });
     (ls.getItem as any).mockImplementation((key: string) => {
       if (key === 'playlists') {
         return [
-          { id: 'pl1', userId: 'u1', title: 'My Mix', songIds: ['s1'] },
-          { id: 'pl2', userId: 'u2', title: 'Other Mix', songIds: ['s2'] },
+          { id: 'pl1', userId: 'u1', title: 'My Mix', songIds: ['s1'], lastPlayedAt: '2026-06-01T00:00:00.000Z' },
+          { id: 'pl2', userId: 'u2', title: 'Other Mix', songIds: ['s2'], lastPlayedAt: '2026-06-01T00:00:00.000Z' },
         ];
       }
       return null;
@@ -36,7 +36,26 @@ describe('RecentPlaylistsRow', () => {
     expect(screen.queryByText('Other Mix')).toBeNull();
   });
 
-  it('orders playlists with lastPlayedAt first, most recent first', async () => {
+  it('excludes playlists that have never been played, even if they have songs', async () => {
+    (auth.getCurrentUser as any).mockReturnValue({ id: 'u1', role: 'listener' });
+    (ls.getItem as any).mockImplementation((key: string) => {
+      if (key === 'playlists') {
+        return [
+          { id: 'pl1', userId: 'u1', title: 'Never Played', songIds: [] },
+          { id: 'pl2', userId: 'u1', title: 'Also Never Played', songIds: ['s1', 's2'] },
+        ];
+      }
+      return null;
+    });
+
+    render(<RecentPlaylistsRow />);
+
+    await waitFor(() => expect(screen.getByText('Nothing played recently')).toBeDefined());
+    expect(screen.queryByText('Never Played')).toBeNull();
+    expect(screen.queryByText('Also Never Played')).toBeNull();
+  });
+
+  it('orders played playlists most recent first', async () => {
     (auth.getCurrentUser as any).mockReturnValue({ id: 'u1', role: 'listener' });
     (ls.getItem as any).mockImplementation((key: string) => {
       if (key === 'playlists') {
@@ -52,14 +71,17 @@ describe('RecentPlaylistsRow', () => {
     render(<RecentPlaylistsRow />);
 
     await waitFor(() => expect(screen.getByText('Played Recent')).toBeDefined());
-    const titles = screen.getAllByText(/Never Played|Played Older|Played Recent/).map((el) => el.textContent);
-    expect(titles).toEqual(['Played Recent', 'Played Older', 'Never Played']);
+    expect(screen.queryByText('Never Played')).toBeNull();
+    const titles = screen.getAllByText(/Played Older|Played Recent/).map((el) => el.textContent);
+    expect(titles).toEqual(['Played Recent', 'Played Older']);
   });
 
   it('clicking a card navigates to the playlist detail page', async () => {
     (auth.getCurrentUser as any).mockReturnValue({ id: 'u1', role: 'listener' });
     (ls.getItem as any).mockImplementation((key: string) => {
-      if (key === 'playlists') return [{ id: 'pl1', userId: 'u1', title: 'My Mix', songIds: [] }];
+      if (key === 'playlists') {
+        return [{ id: 'pl1', userId: 'u1', title: 'My Mix', songIds: [], lastPlayedAt: '2026-06-01T00:00:00.000Z' }];
+      }
       return null;
     });
 
