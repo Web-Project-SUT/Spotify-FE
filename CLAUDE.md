@@ -73,10 +73,27 @@ a missing translation degrades gracefully instead of crashing). Language and `di
 off `userPrefs.language` in `localStorage` and synced across tabs via the `storage` event — the same
 mechanism used by Player/GroupSession, not a new one. `LanguageProvider` also sets
 `document.documentElement.lang`/`dir` on every change, so the whole document flips to RTL for Persian, and it
-mounts outermost in `app/layout.tsx` (around `AuthProvider`) so every route can call `useLanguage()`. Only
-core surfaces (`Sidebar`, `/settings`, `/home` + its row headers, and the login/register auth pages) are
-wired through `t()` so far — other pages still hardcode English and fall back to the `en` dictionary until
-migrated; do this incrementally rather than all at once.
+mounts outermost in `app/layout.tsx` (around `AuthProvider`) so every route can call `useLanguage()`. Core
+surfaces (`Sidebar`, `/settings`, `/home` + its row headers), the full support dashboard (both the "Artist
+approvals" and "Support tickets" tabs), the full artist panel (`ArtistStatsDashboard` — "My works" — and
+`UploadArtworkForm` — "Upload"), and `NotificationPanel`/`/notifications` (chrome only — notification
+title/message bodies stay plain English strings, matching the `support.*` precedent, since they're stored
+content rendered as-is rather than UI chrome) are wired through `t()`. Other pages still hardcode English and
+fall back to the `en` dictionary until migrated; do this incrementally rather than all at once. The `/login`
+and `/register` pages were deliberately migrated then **reverted** to hardcoded English — the assignment
+wants a single consistent login/sign-up experience regardless of the active language, so those two pages
+intentionally do not call `useLanguage()`/`t()`; don't re-migrate them without checking with the user first.
+
+**Artist approval queue** (`components/SupportDashboard.tsx`, "Artist approvals" tab) lists
+`role === 'artist' && status === 'pending'` users from the `users` collection. **Approve** sets
+`status: 'active'` directly; **Reject** opens an in-app reason modal (not the browser's native `prompt()`)
+and, on confirm, sets `status: 'rejected'` — a value distinct from `'suspended'` (an active account later
+disabled) in the `Status` union (`utils/types.ts`). Both paths write an `approval`-type notification to the
+artist via `addRecord('notifications', …)`. Separately, `registerArtist` (`context/AuthContext.tsx`) writes
+one `approval`-type notification to every `role === 'support' || role === 'admin'` user at registration time,
+so the queue is proactively surfaced rather than only discoverable by visiting the dashboard. Notification
+*bodies* stay plain English strings (rendered as-is by `NotificationPanel`, matching the existing seeded
+notifications) — i18n via `support.*` keys applies to the dashboard chrome, not stored notification content.
 
 **Route protection:** pages that require auth wrap their content in `<AppShell allow={[...roles]}>`
 (`components/AppShell.tsx`), which renders the `Sidebar` + a `<ProtectedRoute>` boundary. `ProtectedRoute`

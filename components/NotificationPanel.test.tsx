@@ -3,12 +3,21 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import NotificationPanel from './NotificationPanel';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
 }));
+
+function renderPanel() {
+  return render(
+    <LanguageProvider>
+      <NotificationPanel />
+    </LanguageProvider>
+  );
+}
 
 describe('NotificationPanel', () => {
   beforeEach(() => {
@@ -31,7 +40,7 @@ describe('NotificationPanel', () => {
       return [];
     });
 
-    render(<NotificationPanel />);
+    renderPanel();
 
     await waitFor(() => {
       expect(screen.getByText('Mine')).toBeDefined();
@@ -51,7 +60,7 @@ describe('NotificationPanel', () => {
       return [];
     });
 
-    render(<NotificationPanel />);
+    renderPanel();
 
     await waitFor(() => expect(screen.getByText('Test Notif')).toBeDefined());
 
@@ -75,7 +84,7 @@ describe('NotificationPanel', () => {
       return [];
     });
 
-    render(<NotificationPanel />);
+    renderPanel();
     await waitFor(() => expect(screen.getByText('Test Notif')).toBeDefined());
 
     fireEvent.click(screen.getByText('Delete'));
@@ -91,7 +100,7 @@ describe('NotificationPanel', () => {
       return [];
     });
 
-    render(<NotificationPanel />);
+    renderPanel();
 
     await waitFor(() => {
       expect(screen.getByText(/subscription updates and new releases/i)).toBeDefined();
@@ -104,7 +113,7 @@ describe('NotificationPanel', () => {
       return [];
     });
 
-    render(<NotificationPanel />);
+    renderPanel();
 
     await waitFor(() => {
       expect(screen.getByText(/approval results and monthly payouts/i)).toBeDefined();
@@ -114,7 +123,7 @@ describe('NotificationPanel', () => {
   it('does not crash and shows nothing-to-read when there is no logged-in user', async () => {
     (localStorageUtils.getItem as any).mockImplementation(() => null);
 
-    render(<NotificationPanel />);
+    renderPanel();
 
     await waitFor(() => {
       expect(screen.getByText(/No notifications yet/i)).toBeDefined();

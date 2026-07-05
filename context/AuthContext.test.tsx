@@ -13,7 +13,7 @@ vi.mock('../utils/localStorage', () => ({
 }));
 
 function Consumer() {
-  const { user, login, logout, registerListener } = useAuth();
+  const { user, login, logout, registerListener, registerArtist } = useAuth();
   return (
     <div>
       <span data-testid="user">{user ? user.email : 'none'}</span>
@@ -26,6 +26,18 @@ function Consumer() {
         }
       >
         register
+      </button>
+      <button
+        onClick={() =>
+          registerArtist({
+            email: 'artist@demo.com',
+            password: 'p',
+            stageName: 'New Wave',
+            portfolio: 'http://x.com',
+          })
+        }
+      >
+        register-artist
       </button>
     </div>
   );
@@ -81,6 +93,39 @@ describe('AuthContext', () => {
     expect(ls.addRecord).toHaveBeenCalledWith(
       'users',
       expect.objectContaining({ role: 'listener', tier: 'basic' })
+    );
+  });
+
+  it('notifies support/admin users when a new artist registers', async () => {
+    (ls.getItem as any).mockImplementation((key: string) => {
+      if (key === 'users') {
+        return [
+          { id: 's1', email: 'support@demo.com', role: 'support' },
+          { id: 'ad1', email: 'admin@demo.com', role: 'admin' },
+          { id: 'l1', email: 'listener@demo.com', role: 'listener' },
+        ];
+      }
+      return null;
+    });
+
+    render(<AuthProvider><Consumer /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId('user').textContent).toBe('none'));
+
+    fireEvent.click(screen.getByText('register-artist'));
+
+    await waitFor(() =>
+      expect(ls.addRecord).toHaveBeenCalledWith(
+        'notifications',
+        expect.objectContaining({ userId: 's1', type: 'approval', message: expect.stringContaining('New Wave') })
+      )
+    );
+    expect(ls.addRecord).toHaveBeenCalledWith(
+      'notifications',
+      expect.objectContaining({ userId: 'ad1', type: 'approval', message: expect.stringContaining('New Wave') })
+    );
+    expect(ls.addRecord).not.toHaveBeenCalledWith(
+      'notifications',
+      expect.objectContaining({ userId: 'l1' })
     );
   });
 });

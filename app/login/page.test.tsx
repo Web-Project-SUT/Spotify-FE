@@ -3,7 +3,6 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import LoginPage from './page';
-import { LanguageProvider } from '../../context/LanguageContext';
 
 const replaceMock = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: replaceMock, push: vi.fn() }) }));
@@ -13,14 +12,6 @@ vi.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ login: loginMock, user: null, loading: false }),
 }));
 
-function renderPage() {
-  return render(
-    <LanguageProvider>
-      <LoginPage />
-    </LanguageProvider>
-  );
-}
-
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,7 +20,7 @@ describe('LoginPage', () => {
   afterEach(() => cleanup());
 
   it('shows required-field errors on empty submit and does not call login', () => {
-    renderPage();
+    render(<LoginPage />);
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
 
     expect(screen.getByText('Email is required.')).toBeDefined();
@@ -38,7 +29,7 @@ describe('LoginPage', () => {
   });
 
   it('shows an email format error for an invalid email', () => {
-    renderPage();
+    render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'not-an-email' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
@@ -49,7 +40,7 @@ describe('LoginPage', () => {
 
   it('shows an auth error when login returns null', () => {
     loginMock.mockReturnValue(null);
-    renderPage();
+    render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'nobody@demo.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
@@ -59,7 +50,7 @@ describe('LoginPage', () => {
 
   it('redirects to the listener home on successful login', () => {
     loginMock.mockReturnValue({ id: 'u1', email: 'listener@demo.com', role: 'listener' });
-    renderPage();
+    render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'listener@demo.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
@@ -69,7 +60,7 @@ describe('LoginPage', () => {
 
   it('redirects to the admin dashboard on successful login', () => {
     loginMock.mockReturnValue({ id: 'u2', email: 'admin@demo.com', role: 'admin' });
-    renderPage();
+    render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'admin@demo.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
-import { useLanguage } from '../../context/LanguageContext';
 import { Button, Input } from '../../components/ui';
 import { getRoleHome, EMAIL_RE } from '../../utils/auth';
 import { getItem } from '../../utils/localStorage';
@@ -24,7 +23,6 @@ interface ListenerFieldErrors {
 
 export default function RegisterPage() {
   const { registerListener, registerArtist, user, loading } = useAuth();
-  const { t } = useLanguage();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>('listener');
   const [error, setError] = useState('');
@@ -127,10 +125,12 @@ export default function RegisterPage() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-surface rounded-lg p-8 text-center space-y-4">
           <span className="text-5xl">⏳</span>
-          <h1 className="text-2xl font-bold">{t('auth.applicationPending')}</h1>
-          <p className="text-muted">{t('auth.applicationPendingDesc')}</p>
+          <h1 className="text-2xl font-bold">Application pending</h1>
+          <p className="text-muted">
+            Your artist account is in review. You&apos;ll be notified once support approves it.
+          </p>
           <Link href="/login">
-            <Button>{t('auth.backToLogin')}</Button>
+            <Button>Back to login</Button>
           </Link>
         </div>
       </div>
@@ -140,20 +140,20 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 py-10">
       <div className="w-full max-w-md bg-surface rounded-lg p-8 space-y-4">
-        <h1 className="text-2xl font-bold text-center">{t('auth.signUp')}</h1>
+        <h1 className="text-2xl font-bold text-center">Sign up</h1>
 
         <div className="flex gap-2 bg-surface-2 rounded-full p-1">
           <button
             onClick={() => setMode('listener')}
             className={`flex-1 rounded-full py-1.5 text-sm font-bold transition-colors ${mode === 'listener' ? 'bg-accent text-black' : 'text-muted'}`}
           >
-            {t('auth.listener')}
+            Listener
           </button>
           <button
             onClick={() => setMode('artist')}
             className={`flex-1 rounded-full py-1.5 text-sm font-bold transition-colors ${mode === 'artist' ? 'bg-accent text-black' : 'text-muted'}`}
           >
-            {t('auth.artist')}
+            Artist
           </button>
         </div>
 
@@ -162,7 +162,7 @@ export default function RegisterPage() {
         {mode === 'listener' ? (
           <form onSubmit={handleListenerSubmit} className="space-y-3" noValidate>
             <Input
-              label={t('auth.displayName')}
+              label="Display name"
               name="displayName"
               value={form.displayName}
               onChange={(e) => {
@@ -172,7 +172,7 @@ export default function RegisterPage() {
               error={fieldErrors.displayName}
             />
             <Input
-              label={t('auth.email')}
+              label="Email"
               name="email"
               type="email"
               value={form.email}
@@ -183,7 +183,7 @@ export default function RegisterPage() {
               error={fieldErrors.email}
             />
             <Input
-              label={t('auth.password')}
+              label="Password"
               name="password"
               type="password"
               value={form.password}
@@ -194,7 +194,7 @@ export default function RegisterPage() {
               error={fieldErrors.password}
             />
             <Input
-              label={t('auth.confirmPassword')}
+              label="Confirm password"
               name="confirm"
               type="password"
               value={form.confirm}
@@ -205,7 +205,7 @@ export default function RegisterPage() {
               error={fieldErrors.confirm}
             />
             <Input
-              label={t('auth.birthDate')}
+              label="Birth date"
               name="birthDate"
               type="date"
               value={form.birthDate}
@@ -216,7 +216,7 @@ export default function RegisterPage() {
               error={fieldErrors.birthDate}
             />
             <div>
-              <label className="block text-sm font-bold mb-1">{t('auth.gender')}</label>
+              <label className="block text-sm font-bold mb-1">Gender</label>
               <select
                 name="gender"
                 value={form.gender}
@@ -226,10 +226,10 @@ export default function RegisterPage() {
                 }}
                 className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-white"
               >
-                <option value="">{t('auth.selectGender')}</option>
-                <option value="female">{t('auth.female')}</option>
-                <option value="male">{t('auth.male')}</option>
-                <option value="other">{t('auth.other')}</option>
+                <option value="">Select…</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
               </select>
               {fieldErrors.gender && <p className="text-danger text-xs mt-1">{fieldErrors.gender}</p>}
             </div>
@@ -244,34 +244,34 @@ export default function RegisterPage() {
                   }}
                 />
                 <span>
-                  {t('auth.acceptPolicyPrefix')}{' '}
+                  I accept the{' '}
                   <button type="button" onClick={() => setShowPolicy(true)} className="text-accent hover:underline">
-                    {t('auth.privacyPolicy')}
+                    privacy policy
                   </button>
                 </span>
               </label>
               {fieldErrors.acceptPolicy && <p className="text-danger text-xs mt-1">{fieldErrors.acceptPolicy}</p>}
             </div>
             <Button type="submit" className="w-full">
-              {t('auth.createAccount')}
+              Create account
             </Button>
           </form>
         ) : (
           <div className="space-y-3">
-            <Input label={t('auth.email')} name="artist-email" type="email" value={artistForm.email} onChange={(e) => setArtistForm({ ...artistForm, email: e.target.value })} />
-            <Input label={t('auth.password')} name="artist-password" type="password" value={artistForm.password} onChange={(e) => setArtistForm({ ...artistForm, password: e.target.value })} />
-            <Input label={t('auth.stageName')} name="stageName" value={artistForm.stageName} onChange={(e) => setArtistForm({ ...artistForm, stageName: e.target.value })} />
-            <Input label={t('auth.portfolio')} name="portfolio" value={artistForm.portfolio} onChange={(e) => setArtistForm({ ...artistForm, portfolio: e.target.value })} />
+            <Input label="Email" name="artist-email" type="email" value={artistForm.email} onChange={(e) => setArtistForm({ ...artistForm, email: e.target.value })} />
+            <Input label="Password" name="artist-password" type="password" value={artistForm.password} onChange={(e) => setArtistForm({ ...artistForm, password: e.target.value })} />
+            <Input label="Stage name" name="stageName" value={artistForm.stageName} onChange={(e) => setArtistForm({ ...artistForm, stageName: e.target.value })} />
+            <Input label="Portfolio / sample works URL" name="portfolio" value={artistForm.portfolio} onChange={(e) => setArtistForm({ ...artistForm, portfolio: e.target.value })} />
             <Button className="w-full" onClick={handleArtistSubmit}>
-              {t('auth.submitApplication')}
+              Submit application
             </Button>
           </div>
         )}
 
         <p className="text-muted text-sm text-center">
-          {t('auth.haveAccount')}{' '}
+          Have an account?{' '}
           <Link href="/login" className="text-white hover:underline">
-            {t('auth.login')}
+            Log in
           </Link>
         </p>
       </div>
