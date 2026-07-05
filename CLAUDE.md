@@ -64,6 +64,20 @@ pages/nav items a user sees; `Tier` (`basic | silver | gold`) is a listener-only
 feature limits (playlist count, gold-only stats, early access). Don't conflate the two — e.g. an `artist` has
 no `tier`.
 
+**i18n is a custom, dependency-free layer** built around `context/LanguageContext.tsx` — the single source
+for the active language. Components read copy via `const { t } = useLanguage()` and `t('some.key')` rather
+than inlining English. `utils/i18n.ts` holds the `Language` union (`'en' | 'fa' | 'es'`), `LANGUAGES` (the
+option list for the settings selector), `RTL_LANGUAGES`/`isRtl`, and the `translations` dictionaries — add
+new copy as keys there, always with an `en` entry (`translate()` falls back to `en`, then to the raw key, so
+a missing translation degrades gracefully instead of crashing). Language and `dir` (RTL for `fa`) are driven
+off `userPrefs.language` in `localStorage` and synced across tabs via the `storage` event — the same
+mechanism used by Player/GroupSession, not a new one. `LanguageProvider` also sets
+`document.documentElement.lang`/`dir` on every change, so the whole document flips to RTL for Persian, and it
+mounts outermost in `app/layout.tsx` (around `AuthProvider`) so every route can call `useLanguage()`. Only
+core surfaces (`Sidebar`, `/settings`, `/home` + its row headers, and the login/register auth pages) are
+wired through `t()` so far — other pages still hardcode English and fall back to the `en` dictionary until
+migrated; do this incrementally rather than all at once.
+
 **Route protection:** pages that require auth wrap their content in `<AppShell allow={[...roles]}>`
 (`components/AppShell.tsx`), which renders the `Sidebar` + a `<ProtectedRoute>` boundary. `ProtectedRoute`
 redirects unauthenticated users to `/login` and redirects users whose role isn't in `allow` back to `/home`.

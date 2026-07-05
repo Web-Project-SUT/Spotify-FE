@@ -3,6 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import GoldEarlyAccess from './GoldEarlyAccess';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 
 const pushMock = vi.fn();
@@ -14,6 +15,14 @@ vi.mock('next/navigation', () => ({
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
 }));
+
+function renderComponent() {
+  return render(
+    <LanguageProvider>
+      <GoldEarlyAccess />
+    </LanguageProvider>
+  );
+}
 
 describe('GoldEarlyAccess', () => {
   beforeEach(() => {
@@ -29,7 +38,7 @@ describe('GoldEarlyAccess', () => {
       key === 'currentUser' ? { id: 'u1', role: 'listener', tier: 'basic' } : []
     );
 
-    render(<GoldEarlyAccess />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText(/Unlock early access/i)).toBeDefined();
@@ -42,7 +51,7 @@ describe('GoldEarlyAccess', () => {
       key === 'currentUser' ? { id: 'u2', role: 'listener', tier: 'silver' } : []
     );
 
-    render(<GoldEarlyAccess />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText(/Unlock early access/i)).toBeDefined();
@@ -56,7 +65,7 @@ describe('GoldEarlyAccess', () => {
       return [];
     });
 
-    render(<GoldEarlyAccess />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.queryByText(/Unlock early access/i)).toBeNull();
@@ -70,7 +79,7 @@ describe('GoldEarlyAccess', () => {
       key === 'currentUser' ? { id: 'u3', role: 'listener', tier: 'gold' } : []
     );
 
-    render(<GoldEarlyAccess />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText(/No early access tracks available/i)).toBeDefined();
@@ -82,7 +91,7 @@ describe('GoldEarlyAccess', () => {
       key === 'currentUser' ? { id: 'a1', role: 'artist' } : []
     );
 
-    render(<GoldEarlyAccess />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText(/Unlock early access/i)).toBeDefined();

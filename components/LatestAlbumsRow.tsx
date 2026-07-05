@@ -5,12 +5,14 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getItem } from '../utils/localStorage';
 import { Album, User } from '../utils/types';
+import { useLanguage } from '../context/LanguageContext';
 import { Card, EmptyState } from './ui';
 
 const MAX_ALBUMS = 8;
 
 export default function LatestAlbumsRow() {
   const router = useRouter();
+  const { t } = useLanguage();
   type State = { albums: Album[]; artists: Record<string, string>; loaded: boolean };
   const [state, setState] = useState<State>({ albums: [], artists: {}, loaded: false });
 
@@ -36,9 +38,9 @@ export default function LatestAlbumsRow() {
 
   return (
     <div className="my-8 w-full">
-      <h2 className="text-2xl font-bold mb-4">Latest albums</h2>
+      <h2 className="text-2xl font-bold mb-4">{t('home.latestAlbums')}</h2>
       {state.albums.length === 0 ? (
-        <EmptyState icon="💿" title="No albums yet" />
+        <EmptyState icon="💿" title={t('home.noAlbumsYet')} />
       ) : (
         <div className="flex overflow-x-auto space-x-4 pb-4">
           {state.albums.map((album) => (

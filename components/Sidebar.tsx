@@ -4,41 +4,43 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { Role } from '../utils/types';
 import { Avatar, Badge } from './ui';
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: string;
   roles?: Role[]; // if set, only shown to these roles
 }
 
 const NAV: NavItem[] = [
-  { href: '/home', label: 'Home', icon: '🏠', roles: ['listener'] },
-  { href: '/albums', label: 'Browse', icon: '🔍', roles: ['listener'] },
-  { href: '/playlists', label: 'Playlists', icon: '📚', roles: ['listener'] },
-  { href: '/notifications', label: 'Notifications', icon: '🔔' },
-  { href: '/settings', label: 'Settings', icon: '⚙️', roles: ['listener', 'artist'] },
-  { href: '/artist-panel', label: 'My works', icon: '🎨', roles: ['artist'] },
-  { href: '/artist-panel/upload', label: 'Upload', icon: '⬆️', roles: ['artist'] },
-  { href: '/support', label: 'Tickets & approvals', icon: '🎫', roles: ['support', 'admin'] },
-  { href: '/dashboard', label: 'Financials', icon: '💰', roles: ['admin'] },
-  { href: '/group', label: 'Group session', icon: '👥', roles: ['listener'] },
+  { href: '/home', labelKey: 'nav.home', icon: '🏠', roles: ['listener'] },
+  { href: '/albums', labelKey: 'nav.browse', icon: '🔍', roles: ['listener'] },
+  { href: '/playlists', labelKey: 'nav.playlists', icon: '📚', roles: ['listener'] },
+  { href: '/notifications', labelKey: 'nav.notifications', icon: '🔔' },
+  { href: '/settings', labelKey: 'nav.settings', icon: '⚙️', roles: ['listener', 'artist'] },
+  { href: '/artist-panel', labelKey: 'nav.myWorks', icon: '🎨', roles: ['artist'] },
+  { href: '/artist-panel/upload', labelKey: 'nav.upload', icon: '⬆️', roles: ['artist'] },
+  { href: '/support', labelKey: 'nav.tickets', icon: '🎫', roles: ['support', 'admin'] },
+  { href: '/dashboard', labelKey: 'nav.financials', icon: '💰', roles: ['admin'] },
+  { href: '/group', labelKey: 'nav.groupSession', icon: '👥', roles: ['listener'] },
 ];
-
-const tierBadge: Record<string, React.ReactNode> = {
-  gold: <Badge tone="gold">Gold</Badge>,
-  silver: <Badge tone="silver">Silver</Badge>,
-  basic: <Badge tone="neutral">Free</Badge>,
-};
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
 
   if (!user) return null;
+
+  const tierBadge: Record<string, React.ReactNode> = {
+    gold: <Badge tone="gold">{t('settings.tier.gold')}</Badge>,
+    silver: <Badge tone="silver">{t('settings.tier.silver')}</Badge>,
+    basic: <Badge tone="neutral">{t('settings.tier.free')}</Badge>,
+  };
 
   const items = NAV.filter((item) => !item.roles || item.roles.includes(user.role));
 
@@ -64,7 +66,7 @@ export default function Sidebar() {
               className={`flex items-center gap-3 px-3 py-2 rounded text-sm transition-colors ${active ? 'bg-surface-3 text-white font-bold' : 'text-muted hover:text-white'}`}
             >
               <span>{item.icon}</span>
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </Link>
           );
         })}
@@ -81,7 +83,7 @@ export default function Sidebar() {
           </div>
         </Link>
         <button onClick={handleLogout} className="text-muted text-sm hover:text-white w-full text-left px-1">
-          Log out
+          {t('sidebar.logout')}
         </button>
       </div>
     </aside>

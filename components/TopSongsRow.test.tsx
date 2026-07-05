@@ -3,6 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import TopSongsRow from './TopSongsRow';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 
 // Mock the database
@@ -10,6 +11,14 @@ vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
 }));
+
+function renderRow() {
+  return render(
+    <LanguageProvider>
+      <TopSongsRow />
+    </LanguageProvider>
+  );
+}
 
 describe('TopSongsRow Component', () => {
   beforeEach(() => {
@@ -32,7 +41,7 @@ describe('TopSongsRow Component', () => {
       return null;
     });
 
-    render(<TopSongsRow />);
+    renderRow();
 
     // Wait for the component to render the song
     await waitFor(() => {
@@ -56,7 +65,7 @@ describe('TopSongsRow Component', () => {
       return null;
     });
 
-    render(<TopSongsRow />);
+    renderRow();
 
     await waitFor(() => {
       expect(screen.getByText(/No songs available yet/i)).toBeDefined();

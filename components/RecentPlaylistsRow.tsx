@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getItem } from '../utils/localStorage';
 import { Playlist } from '../utils/types';
 import { getCurrentUser } from '../utils/auth';
+import { useLanguage } from '../context/LanguageContext';
 import { Card, EmptyState, Button } from './ui';
 
 const MAX_PLAYLISTS = 8;
@@ -18,6 +19,7 @@ function sortByRecency(playlists: Playlist[]): Playlist[] {
 
 export default function RecentPlaylistsRow() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [hasAnyPlaylists, setHasAnyPlaylists] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -35,21 +37,21 @@ export default function RecentPlaylistsRow() {
 
   return (
     <div className="my-8 w-full">
-      <h2 className="text-2xl font-bold mb-4">Recently played</h2>
+      <h2 className="text-2xl font-bold mb-4">{t('home.recentlyPlayed')}</h2>
       {playlists.length === 0 ? (
         hasAnyPlaylists ? (
           <EmptyState
             icon="🎵"
-            title="Nothing played recently"
-            description="Play a song from one of your playlists to see it here."
-            action={<Button onClick={() => router.push('/playlists')}>Go to your playlists</Button>}
+            title={t('home.nothingPlayedRecentlyTitle')}
+            description={t('home.nothingPlayedRecentlyDesc')}
+            action={<Button onClick={() => router.push('/playlists')}>{t('home.goToPlaylists')}</Button>}
           />
         ) : (
           <EmptyState
             icon="🎵"
-            title="No playlists yet"
-            description="Create a playlist to see it here."
-            action={<Button onClick={() => router.push('/playlists')}>Create your first playlist</Button>}
+            title={t('home.noPlaylistsYetTitle')}
+            description={t('home.noPlaylistsYetDesc')}
+            action={<Button onClick={() => router.push('/playlists')}>{t('home.createFirstPlaylist')}</Button>}
           />
         )
       ) : (

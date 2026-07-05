@@ -3,9 +3,18 @@ import React from 'react';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import RecommendationEngine from './RecommendationEngine';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 
 vi.mock('../utils/localStorage', () => ({ getItem: vi.fn() }));
+
+function renderComponent() {
+  return render(
+    <LanguageProvider>
+      <RecommendationEngine />
+    </LanguageProvider>
+  );
+}
 
 describe('RecommendationEngine (render)', () => {
   beforeEach(() => {
@@ -28,7 +37,7 @@ describe('RecommendationEngine (render)', () => {
       return [];
     });
 
-    render(<RecommendationEngine />);
+    renderComponent();
 
     await waitFor(() => expect(screen.getByText('Rock B')).toBeDefined());
     expect(screen.getByText(/Because you listened to Rock/i)).toBeDefined();
@@ -37,7 +46,7 @@ describe('RecommendationEngine (render)', () => {
   it('renders nothing when there are no songs at all', () => {
     (localStorageUtils.getItem as any).mockReturnValue([]);
 
-    render(<RecommendationEngine />);
+    renderComponent();
 
     expect(screen.queryByText('Recommended for you')).toBeNull();
   });
