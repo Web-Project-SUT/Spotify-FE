@@ -129,6 +129,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       followers: 0,
     };
     addRecord('users', newArtist);
+
+    const recipients: User[] = (getItem('users') || []).filter(
+      (u: User) => u.role === 'support' || u.role === 'admin'
+    );
+    recipients.forEach((recipient) => {
+      addRecord('notifications', {
+        id: `n-${Date.now()}-${recipient.id}`,
+        userId: recipient.id,
+        title: 'New artist verification request',
+        message: `${input.stageName} has applied for an artist account and is awaiting review.`,
+        type: 'approval',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+    });
+
     return newArtist;
   }, []);
 

@@ -3,17 +3,27 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ArtistStatsDashboard from './ArtistStatsDashboard';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 import * as authUtils from '../utils/auth';
 
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
   deleteRecord: vi.fn(),
+  setItem: vi.fn(),
 }));
 
 vi.mock('../utils/auth', () => ({
   getCurrentUser: vi.fn(),
 }));
+
+function renderDashboard() {
+  return render(
+    <LanguageProvider>
+      <ArtistStatsDashboard />
+    </LanguageProvider>
+  );
+}
 
 describe('ArtistStatsDashboard', () => {
   beforeEach(() => {
@@ -31,7 +41,7 @@ describe('ArtistStatsDashboard', () => {
       { id: '2', title: 'Someone Else Song', streamCount: 999, listenerCount: 500, earnings: 999, artistId: 'a2' },
     ]);
 
-    render(<ArtistStatsDashboard />);
+    renderDashboard();
 
     await waitFor(() => expect(screen.getByText('Song One')).toBeDefined());
     expect(screen.getByText('150')).toBeDefined();
@@ -44,7 +54,7 @@ describe('ArtistStatsDashboard', () => {
       { id: '1', title: 'Song One', streamCount: 150, listenerCount: 80, earnings: 50, artistId: 'a1' },
     ]);
 
-    render(<ArtistStatsDashboard />);
+    renderDashboard();
     await waitFor(() => expect(screen.getByText('Song One')).toBeDefined());
 
     fireEvent.click(screen.getByText('Delete'));
@@ -57,7 +67,7 @@ describe('ArtistStatsDashboard', () => {
     (authUtils.getCurrentUser as any).mockReturnValue({ id: 'a1', role: 'artist' });
     (localStorageUtils.getItem as any).mockReturnValue([]);
 
-    render(<ArtistStatsDashboard />);
+    renderDashboard();
 
     await waitFor(() => {
       expect(screen.getByText(/haven't released any tracks yet/i)).toBeDefined();

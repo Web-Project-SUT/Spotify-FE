@@ -6,7 +6,7 @@
 // and listeners additionally carry a subscription tier independent of role.
 export type Role = 'listener' | 'artist' | 'support' | 'admin';
 export type Tier = 'basic' | 'silver' | 'gold';
-export type Status = 'active' | 'pending' | 'suspended';
+export type Status = 'active' | 'pending' | 'suspended' | 'rejected';
 export type Gender = 'male' | 'female' | 'other';
 
 // --- Interfaces ---

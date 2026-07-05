@@ -4,22 +4,24 @@
 import React, { useEffect, useState } from 'react';
 import { getItem, setItem } from '../utils/localStorage';
 import { Notification, User } from '../utils/types';
+import { useLanguage } from '../context/LanguageContext';
 
 // Per spec, the empty-list message and overall framing differ slightly
 // by role, since each role receives different notification types.
-function emptyStateMessage(role?: User['role']): string {
+function emptyStateKey(role?: User['role']): string {
   switch (role) {
     case 'artist':
-      return 'No notifications yet. You will be notified about approval results and monthly payouts here.';
+      return 'notifications.emptyArtist';
     case 'support':
     case 'admin':
-      return 'No notifications yet. New tickets and artist approval requests will appear here.';
+      return 'notifications.emptySupport';
     default:
-      return 'No notifications yet. You will be notified about subscription updates and new releases here.';
+      return 'notifications.emptyListener';
   }
 }
 
 export default function NotificationPanel() {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [role, setRole] = useState<User['role'] | undefined>(undefined);
   const [loaded, setLoaded] = useState(false);
@@ -67,15 +69,15 @@ export default function NotificationPanel() {
   if (!loaded) return null;
 
   if (notifications.length === 0) {
-    return <div className="p-4 text-gray-400 w-80">{emptyStateMessage(role)}</div>;
+    return <div className="p-4 text-gray-400 w-80">{t(emptyStateKey(role))}</div>;
   }
 
   return (
     <div className="w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-4">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-white font-bold">Notifications</h3>
+        <h3 className="text-white font-bold">{t('notifications.title')}</h3>
         <button onClick={markAllRead} className="text-xs text-blue-400 hover:underline">
-          Mark all read
+          {t('notifications.markAllRead')}
         </button>
       </div>
       <div className="space-y-2">
@@ -89,11 +91,11 @@ export default function NotificationPanel() {
             <div className="flex gap-2 mt-2">
               {!n.isRead && (
                 <button onClick={() => markAsRead(n.id)} className="text-[10px] text-green-400">
-                  Read
+                  {t('notifications.read')}
                 </button>
               )}
               <button onClick={() => deleteNotification(n.id)} className="text-[10px] text-red-400">
-                Delete
+                {t('notifications.delete')}
               </button>
             </div>
           </div>

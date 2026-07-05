@@ -4,8 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { getItem, deleteRecord } from '../utils/localStorage';
 import { Song } from '../utils/types';
 import { getCurrentUser } from '../utils/auth';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ArtistStatsDashboard() {
+  const { t } = useLanguage();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -25,18 +27,18 @@ export default function ArtistStatsDashboard() {
 
   return (
     <div className="bg-gray-900 p-6 text-white rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Artist dashboard</h2>
+      <h2 className="text-2xl font-bold mb-4">{t('artistPanel.title')}</h2>
       {songs.length === 0 ? (
-        <p className="text-gray-500 italic">You haven't released any tracks yet.</p>
+        <p className="text-gray-500 italic">{t('artistPanel.noTracksYet')}</p>
       ) : (
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-gray-700">
-              <th className="p-2">Title</th>
-              <th className="p-2">Listeners</th>
-              <th className="p-2">Streams</th>
-              <th className="p-2">Earnings</th>
-              <th className="p-2">Actions</th>
+              <th className="p-2">{t('artistPanel.trackTitle')}</th>
+              <th className="p-2">{t('artistPanel.listeners')}</th>
+              <th className="p-2">{t('artistPanel.streams')}</th>
+              <th className="p-2">{t('artistPanel.earnings')}</th>
+              <th className="p-2">{t('artistPanel.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -48,7 +50,7 @@ export default function ArtistStatsDashboard() {
                 <td className="p-2">${(song.earnings || 0).toLocaleString()}</td>
                 <td className="p-2">
                   <button onClick={() => handleDelete(song.id)} className="text-red-400">
-                    Delete
+                    {t('artistPanel.delete')}
                   </button>
                 </td>
               </tr>

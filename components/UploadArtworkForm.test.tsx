@@ -3,11 +3,14 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import UploadArtworkForm from './UploadArtworkForm';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 import * as authUtils from '../utils/auth';
 
 vi.mock('../utils/localStorage', () => ({
   addRecord: vi.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
 }));
 
 vi.mock('../utils/auth', () => ({
@@ -16,6 +19,14 @@ vi.mock('../utils/auth', () => ({
 
 function makeFile(name: string, type: string) {
   return new File(['dummy content'], name, { type });
+}
+
+function renderForm() {
+  return render(
+    <LanguageProvider>
+      <UploadArtworkForm />
+    </LanguageProvider>
+  );
 }
 
 describe('UploadArtworkForm', () => {
@@ -30,7 +41,7 @@ describe('UploadArtworkForm', () => {
   });
 
   it('submits with the real logged-in artist id and an audio file', async () => {
-    render(<UploadArtworkForm />);
+    renderForm();
 
     fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Test Song' } });
     fireEvent.change(screen.getByPlaceholderText('Genre'), { target: { value: 'Jazz' } });
@@ -50,7 +61,7 @@ describe('UploadArtworkForm', () => {
   });
 
   it('blocks submission without an audio file', () => {
-    render(<UploadArtworkForm />);
+    renderForm();
 
     fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'No Audio' } });
     fireEvent.click(screen.getByText('Submit artwork'));
@@ -60,7 +71,7 @@ describe('UploadArtworkForm', () => {
   });
 
   it('rejects an unsupported audio file type', () => {
-    render(<UploadArtworkForm />);
+    renderForm();
 
     const audioInput = screen.getByLabelText(/Audio file/i) as HTMLInputElement;
     fireEvent.change(audioInput, { target: { files: [makeFile('track.ogg', 'audio/ogg')] } });
@@ -69,7 +80,7 @@ describe('UploadArtworkForm', () => {
   });
 
   it('blocks submission without a title', () => {
-    render(<UploadArtworkForm />);
+    renderForm();
 
     const audioInput = screen.getByLabelText(/Audio file/i) as HTMLInputElement;
     fireEvent.change(audioInput, { target: { files: [makeFile('track.mp3', 'audio/mpeg')] } });
@@ -81,7 +92,7 @@ describe('UploadArtworkForm', () => {
 
   it('blocks submission for a non-artist user', () => {
     (authUtils.getCurrentUser as any).mockReturnValue({ id: 'u1', role: 'listener' });
-    render(<UploadArtworkForm />);
+    renderForm();
 
     fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Test' } });
     const audioInput = screen.getByLabelText(/Audio file/i) as HTMLInputElement;
@@ -93,7 +104,7 @@ describe('UploadArtworkForm', () => {
   });
 
   it('parses collaborators into an array', async () => {
-    render(<UploadArtworkForm />);
+    renderForm();
 
     fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Collab Song' } });
     fireEvent.change(screen.getByPlaceholderText(/Collaborators/i), { target: { value: 'Echo Drift, Nova Ray' } });

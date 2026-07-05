@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SupportDashboard from './SupportDashboard';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as ls from '../utils/localStorage';
 
 vi.mock('../utils/localStorage', () => ({
@@ -17,6 +18,14 @@ const users = [
   { id: 'a1', role: 'artist', stageName: 'Nova', email: 'nova@demo.com', status: 'active' },
 ];
 
+function renderDashboard() {
+  return render(
+    <LanguageProvider>
+      <SupportDashboard />
+    </LanguageProvider>
+  );
+}
+
 describe('SupportDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,13 +38,13 @@ describe('SupportDashboard', () => {
   afterEach(() => cleanup());
 
   it('lists only pending artist applications', async () => {
-    render(<SupportDashboard />);
+    renderDashboard();
     await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());
     expect(screen.queryByText('Nova')).toBeNull();
   });
 
   it('approves an artist and sends a notification', async () => {
-    render(<SupportDashboard />);
+    renderDashboard();
     await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());
 
     fireEvent.click(screen.getByText('Approve'));
@@ -45,8 +54,29 @@ describe('SupportDashboard', () => {
     await waitFor(() => expect(screen.queryByText('New Wave')).toBeNull());
   });
 
+  it('rejects an artist with a reason via the in-app modal', async () => {
+    renderDashboard();
+    await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());
+
+    fireEvent.click(screen.getByText('Reject'));
+    const textarea = await screen.findByPlaceholderText(/Explain why this application is being rejected/i);
+    fireEvent.change(textarea, { target: { value: 'Samples did not meet quality bar' } });
+    fireEvent.click(screen.getByText('Confirm rejection'));
+
+    expect(ls.updateRecord).toHaveBeenCalledWith('users', 'a3', { status: 'rejected' });
+    expect(ls.addRecord).toHaveBeenCalledWith(
+      'notifications',
+      expect.objectContaining({
+        userId: 'a3',
+        type: 'approval',
+        message: expect.stringContaining('Samples did not meet quality bar'),
+      })
+    );
+    await waitFor(() => expect(screen.queryByText('New Wave')).toBeNull());
+  });
+
   it('switches to the tickets tab and opens a ticket thread', async () => {
-    render(<SupportDashboard />);
+    renderDashboard();
     await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());
 
     fireEvent.click(screen.getByText('Support tickets'));
