@@ -4,8 +4,10 @@
 import React, { useEffect, useState } from 'react';
 import { getItem, setItem } from '../utils/localStorage';
 import { Song } from '../utils/types';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function TopSongsRow() {
+  const { t } = useLanguage();
   const [songs, setSongs] = useState<Song[]>([]);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
 
@@ -38,9 +40,9 @@ export default function TopSongsRow() {
 
   return (
     <div className="my-8 w-full">
-      <h2 className="text-2xl font-bold mb-4 text-white">Top Songs</h2>
+      <h2 className="text-2xl font-bold mb-4 text-white">{t('home.topSongs')}</h2>
       {songs.length === 0 ? (
-        <p className="text-gray-500 italic">No songs available yet.</p>
+        <p className="text-gray-500 italic">{t('home.noSongsAvailable')}</p>
       ) : (
         <div className="flex overflow-x-auto space-x-4 pb-4">
         {songs.map((song) => (

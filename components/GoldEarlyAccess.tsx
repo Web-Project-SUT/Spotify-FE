@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { getItem } from '../utils/localStorage';
 import { Song } from '../utils/types';
 import { isGoldUser } from '../utils/auth';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function GoldEarlyAccess() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [isGold, setIsGold] = useState(false);
   const [earlyAccessSongs, setEarlyAccessSongs] = useState<Song[]>([]);
 
@@ -27,15 +29,13 @@ export default function GoldEarlyAccess() {
   if (!isGold) {
     return (
       <div className="bg-gradient-to-r from-yellow-600 to-yellow-400 p-6 rounded-xl text-black my-8 flex flex-col items-center shadow-lg">
-        <h2 className="text-2xl font-extrabold mb-2">Unlock early access</h2>
-        <p className="mb-4 font-medium text-center">
-          Upgrade to gold to listen to exclusive new releases before anyone else.
-        </p>
+        <h2 className="text-2xl font-extrabold mb-2">{t('home.unlockEarlyAccess')}</h2>
+        <p className="mb-4 font-medium text-center">{t('home.unlockEarlyAccessDesc')}</p>
         <button
           onClick={() => router.push('/settings')}
           className="bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition shadow-md"
         >
-          Upgrade to gold
+          {t('home.upgradeToGold')}
         </button>
       </div>
     );
@@ -44,14 +44,14 @@ export default function GoldEarlyAccess() {
   if (earlyAccessSongs.length === 0) {
     return (
       <div className="bg-gray-900 border border-yellow-500 p-6 rounded-xl text-gray-400 my-8 shadow-lg">
-        No early access tracks available right now. Check back soon.
+        {t('home.noEarlyAccessTracks')}
       </div>
     );
   }
 
   return (
     <div className="bg-gray-900 border border-yellow-500 p-6 rounded-xl text-white my-8 shadow-lg">
-      <h2 className="text-2xl font-bold text-yellow-400 mb-4">Gold early access</h2>
+      <h2 className="text-2xl font-bold text-yellow-400 mb-4">{t('home.goldEarlyAccess')}</h2>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {earlyAccessSongs.map((song) => (
           <div
@@ -62,7 +62,7 @@ export default function GoldEarlyAccess() {
               {song.cover || '💿'}
             </div>
             <p className="text-sm font-bold text-center truncate w-full">{song.title}</p>
-            <p className="text-xs text-yellow-500">New release</p>
+            <p className="text-xs text-yellow-500">{t('home.newRelease')}</p>
           </div>
         ))}
       </div>

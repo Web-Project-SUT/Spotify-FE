@@ -3,11 +3,20 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import LatestAlbumsRow from './LatestAlbumsRow';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as ls from '../utils/localStorage';
 
 const pushMock = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock }) }));
 vi.mock('../utils/localStorage', () => ({ getItem: vi.fn(), setItem: vi.fn() }));
+
+function renderRow() {
+  return render(
+    <LanguageProvider>
+      <LatestAlbumsRow />
+    </LanguageProvider>
+  );
+}
 
 const ALBUMS = [
   { id: 'a1', title: 'Skyline Echoes', artistId: 'u1', releaseYear: 2024, cover: '' },
@@ -35,7 +44,7 @@ describe('LatestAlbumsRow', () => {
 
   it('renders album cards with title and resolved artist name', async () => {
     mockData();
-    render(<LatestAlbumsRow />);
+    renderRow();
     await waitFor(() => expect(screen.getByText('Skyline Echoes')).toBeDefined());
     expect(screen.getByText('Nova Ray')).toBeDefined();
     expect(screen.getByText('Drift')).toBeDefined();
@@ -44,7 +53,7 @@ describe('LatestAlbumsRow', () => {
 
   it('orders albums latest-first by releaseYear', async () => {
     mockData();
-    render(<LatestAlbumsRow />);
+    renderRow();
     await waitFor(() => expect(screen.getByText('Skyline Echoes')).toBeDefined());
     const titles = screen.getAllByText(/Skyline Echoes|Drift/).map((el) => el.textContent);
     expect(titles[0]).toBe('Skyline Echoes');
@@ -53,7 +62,7 @@ describe('LatestAlbumsRow', () => {
 
   it('clicking a card navigates to /album/<id>', async () => {
     mockData();
-    render(<LatestAlbumsRow />);
+    renderRow();
     await waitFor(() => expect(screen.getByText('Skyline Echoes')).toBeDefined());
     fireEvent.click(screen.getByText('Skyline Echoes'));
     expect(pushMock).toHaveBeenCalledWith('/album/a1');
@@ -61,7 +70,7 @@ describe('LatestAlbumsRow', () => {
 
   it('clicking the artist name navigates to /artist/<id> and does not navigate to the album', async () => {
     mockData();
-    render(<LatestAlbumsRow />);
+    renderRow();
     await waitFor(() => expect(screen.getByText('Nova Ray')).toBeDefined());
     pushMock.mockClear();
     fireEvent.click(screen.getByText('Nova Ray'));
@@ -71,7 +80,7 @@ describe('LatestAlbumsRow', () => {
 
   it('renders an empty state when there are no albums', async () => {
     mockData([], USERS);
-    render(<LatestAlbumsRow />);
+    renderRow();
     await waitFor(() => expect(screen.getByText('No albums yet')).toBeDefined());
   });
 });

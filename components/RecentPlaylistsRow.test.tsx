@@ -3,6 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import RecentPlaylistsRow from './RecentPlaylistsRow';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as ls from '../utils/localStorage';
 import * as auth from '../utils/auth';
 
@@ -10,6 +11,14 @@ const pushMock = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock }) }));
 vi.mock('../utils/localStorage', () => ({ getItem: vi.fn(), setItem: vi.fn() }));
 vi.mock('../utils/auth', () => ({ getCurrentUser: vi.fn() }));
+
+function renderRow() {
+  return render(
+    <LanguageProvider>
+      <RecentPlaylistsRow />
+    </LanguageProvider>
+  );
+}
 
 describe('RecentPlaylistsRow', () => {
   beforeEach(() => {
@@ -30,7 +39,7 @@ describe('RecentPlaylistsRow', () => {
       return null;
     });
 
-    render(<RecentPlaylistsRow />);
+    renderRow();
 
     await waitFor(() => expect(screen.getByText('My Mix')).toBeDefined());
     expect(screen.queryByText('Other Mix')).toBeNull();
@@ -48,7 +57,7 @@ describe('RecentPlaylistsRow', () => {
       return null;
     });
 
-    render(<RecentPlaylistsRow />);
+    renderRow();
 
     await waitFor(() => expect(screen.getByText('Nothing played recently')).toBeDefined());
     expect(screen.queryByText('Never Played')).toBeNull();
@@ -68,7 +77,7 @@ describe('RecentPlaylistsRow', () => {
       return null;
     });
 
-    render(<RecentPlaylistsRow />);
+    renderRow();
 
     await waitFor(() => expect(screen.getByText('Played Recent')).toBeDefined());
     expect(screen.queryByText('Never Played')).toBeNull();
@@ -85,7 +94,7 @@ describe('RecentPlaylistsRow', () => {
       return null;
     });
 
-    render(<RecentPlaylistsRow />);
+    renderRow();
 
     await waitFor(() => expect(screen.getByText('My Mix')).toBeDefined());
     fireEvent.click(screen.getByText('My Mix'));
@@ -100,7 +109,7 @@ describe('RecentPlaylistsRow', () => {
       return null;
     });
 
-    render(<RecentPlaylistsRow />);
+    renderRow();
 
     await waitFor(() => expect(screen.getByText('No playlists yet')).toBeDefined());
     fireEvent.click(screen.getByText('Create your first playlist'));

@@ -4,6 +4,7 @@ import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/re
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import RegisterPage from './page';
 import { AuthProvider } from '../../context/AuthContext';
+import { LanguageProvider } from '../../context/LanguageContext';
 import { User } from '../../utils/types';
 
 const pushMock = vi.fn();
@@ -39,9 +40,11 @@ vi.mock('../../utils/localStorage', () => ({
 
 function renderRegisterPage() {
   return render(
-    <AuthProvider>
-      <RegisterPage />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <RegisterPage />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 
