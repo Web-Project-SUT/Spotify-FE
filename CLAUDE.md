@@ -121,11 +121,12 @@ clicking **Close ticket** sets `closed`; the creator posting a follow-up reopens
 flow both directions: creating a ticket fans out a `type: 'support'` notification to every
 `role === 'support' || role === 'admin'` user, reusing the exact fan-out pattern `registerArtist`
 (`context/AuthContext.tsx`) already uses for artist applications; a support reply notifies the ticket's
-creator the same way. Notification bodies stay plain English, matching every other notification type. Like
-the rest of the support panel, this whole feature (`HelpCenter.tsx` and the ticket parts of
-`SupportDashboard.tsx`) is **English-only by design** — the sole exception is the new `/help` Sidebar entry,
-whose `nav.help` key is only defined in the `en` block of `utils/i18n.ts` and relies on `translate()`'s
-existing fallback-to-`en` behavior for `fa`/`es`.
+creator the same way. Notification bodies stay plain English, matching every other notification type.
+Unlike the staff-facing `SupportDashboard.tsx` (which stays English-only by design, see above), the
+listener/artist-facing `HelpCenter.tsx` **is fully `t()`-driven** — all copy (page title, new-ticket form,
+table headers, thread view, status labels) has `en`/`fa`/`es` entries under the `help.*` key namespace in
+`utils/i18n.ts`, and the `nav.help` Sidebar entry is translated in all three languages too, so `/help`
+follows the active `userPrefs.language` like the other core surfaces instead of being pinned to English.
 
 **Route protection:** pages that require auth wrap their content in `<AppShell allow={[...roles]}>`
 (`components/AppShell.tsx`), which renders the `Sidebar` + a `<ProtectedRoute>` boundary. `ProtectedRoute`

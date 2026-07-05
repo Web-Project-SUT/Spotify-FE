@@ -3,10 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { getItem, addRecord, updateRecord } from '../utils/localStorage';
 import { getCurrentUser } from '../utils/auth';
+import { useLanguage } from '../context/LanguageContext';
 import { Ticket, User } from '../utils/types';
 import { Badge, Button, EmptyState, Input } from './ui';
 
 export default function HelpCenter() {
+  const { t } = useLanguage();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [openTicket, setOpenTicket] = useState<Ticket | null>(null);
   const [reply, setReply] = useState('');
@@ -18,7 +20,7 @@ export default function HelpCenter() {
   useEffect(() => {
     if (!currentUser) return;
     const all: Ticket[] = getItem('tickets') || [];
-    setTickets(all.filter((t) => t.userId === currentUser.id));
+    setTickets(all.filter((ticket) => ticket.userId === currentUser.id));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -67,7 +69,7 @@ export default function HelpCenter() {
       ],
     };
     updateRecord('tickets', updated.id, { status: updated.status, messages: updated.messages });
-    setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setTickets((prev) => prev.map((ticket) => (ticket.id === updated.id ? updated : ticket)));
     setOpenTicket(updated);
     setReply('');
   };
@@ -76,10 +78,11 @@ export default function HelpCenter() {
 
   const badgeTone = (status: Ticket['status']) =>
     status === 'open' ? 'info' : status === 'answered' ? 'success' : 'neutral';
+  const statusLabel = (status: Ticket['status']) => t(`help.status.${status}`);
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Help</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('help.title')}</h1>
 
       {openTicket ? (
         <div className="max-w-xl">
@@ -87,11 +90,11 @@ export default function HelpCenter() {
             onClick={() => setOpenTicket(null)}
             className="text-muted text-sm mb-4 hover:text-white"
           >
-            ← Back to tickets
+            {t('help.backToTickets')}
           </button>
           <h2 className="text-lg font-bold mb-1">{openTicket.subject}</h2>
           <p className="text-muted text-sm mb-4">
-            {openTicket.id} · <Badge tone={badgeTone(openTicket.status)}>{openTicket.status}</Badge>
+            {openTicket.id} · <Badge tone={badgeTone(openTicket.status)}>{statusLabel(openTicket.status)}</Badge>
           </p>
           <div className="space-y-2 mb-4">
             {openTicket.messages.map((m, i) => (
@@ -100,7 +103,7 @@ export default function HelpCenter() {
                 className={`p-3 rounded-lg max-w-[80%] ${m.from === 'user' ? 'bg-accent/20 ml-auto' : 'bg-surface-3'}`}
               >
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <p className="text-xs text-muted">{m.from === 'user' ? 'You' : 'Support'}</p>
+                  <p className="text-xs text-muted">{m.from === 'user' ? t('help.you') : t('help.support')}</p>
                   <p className="text-xs text-muted">{new Date(m.at).toLocaleString()}</p>
                 </div>
                 <p className="text-sm">{m.text}</p>
@@ -112,48 +115,48 @@ export default function HelpCenter() {
               <Input
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
-                placeholder="Type a message…"
+                placeholder={t('help.replyPlaceholder')}
               />
             </div>
-            <Button onClick={sendFollowUp}>Send</Button>
+            <Button onClick={sendFollowUp}>{t('help.send')}</Button>
           </div>
         </div>
       ) : (
         <>
           <div className="bg-surface border border-border rounded-xl p-6 mb-8 max-w-xl">
-            <h2 className="text-lg font-bold mb-4">New ticket</h2>
+            <h2 className="text-lg font-bold mb-4">{t('help.newTicket')}</h2>
             <div className="mb-3">
               <Input
-                label="Subject"
+                label={t('help.subjectLabel')}
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="What do you need help with?"
+                placeholder={t('help.subjectPlaceholder')}
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-bold mb-1 text-white">Message</label>
+              <label className="block text-sm font-bold mb-1 text-white">{t('help.messageLabel')}</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Describe your issue…"
+                placeholder={t('help.messagePlaceholder')}
                 className="w-full bg-surface-2 border border-border rounded px-3 py-2 min-h-24 placeholder-muted focus:outline-none focus:border-white transition-colors"
               />
             </div>
             <Button onClick={submitTicket} disabled={!subject.trim() || !message.trim()}>
-              Submit ticket
+              {t('help.submit')}
             </Button>
           </div>
 
           {tickets.length === 0 ? (
-            <EmptyState icon="🎧" title="No tickets yet" description="Submit a ticket above and we'll get back to you." />
+            <EmptyState icon="🎧" title={t('help.emptyTitle')} description={t('help.emptyDesc')} />
           ) : (
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border text-muted text-sm">
-                  <th className="p-2">ID</th>
-                  <th className="p-2">Subject</th>
-                  <th className="p-2">Date</th>
-                  <th className="p-2">Status</th>
+                  <th className="p-2">{t('help.columnId')}</th>
+                  <th className="p-2">{t('help.columnSubject')}</th>
+                  <th className="p-2">{t('help.columnDate')}</th>
+                  <th className="p-2">{t('help.columnStatus')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,7 +170,7 @@ export default function HelpCenter() {
                     <td className="p-2">{ticket.subject}</td>
                     <td className="p-2 text-muted">{ticket.date}</td>
                     <td className="p-2">
-                      <Badge tone={badgeTone(ticket.status)}>{ticket.status}</Badge>
+                      <Badge tone={badgeTone(ticket.status)}>{statusLabel(ticket.status)}</Badge>
                     </td>
                   </tr>
                 ))}

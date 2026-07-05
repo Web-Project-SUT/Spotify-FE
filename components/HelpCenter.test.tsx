@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HelpCenter from './HelpCenter';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as ls from '../utils/localStorage';
 
 vi.mock('../utils/localStorage', () => ({
@@ -42,7 +43,11 @@ const tickets = [
 ];
 
 function renderHelpCenter() {
-  return render(<HelpCenter />);
+  return render(
+    <LanguageProvider>
+      <HelpCenter />
+    </LanguageProvider>
+  );
 }
 
 describe('HelpCenter', () => {
