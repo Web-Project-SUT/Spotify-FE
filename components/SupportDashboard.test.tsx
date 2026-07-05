@@ -3,7 +3,6 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SupportDashboard from './SupportDashboard';
-import { LanguageProvider } from '../context/LanguageContext';
 import * as ls from '../utils/localStorage';
 
 vi.mock('../utils/localStorage', () => ({
@@ -19,11 +18,7 @@ const users = [
 ];
 
 function renderDashboard() {
-  return render(
-    <LanguageProvider>
-      <SupportDashboard />
-    </LanguageProvider>
-  );
+  return render(<SupportDashboard />);
 }
 
 describe('SupportDashboard', () => {

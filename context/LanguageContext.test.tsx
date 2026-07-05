@@ -78,6 +78,45 @@ describe('LanguageContext', () => {
     expect(document.documentElement.dir).toBe('ltr');
   });
 
+  it('forces English for a support-role currentUser even if userPrefs.language is set', async () => {
+    (ls.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentUser') return { id: 's1', role: 'support' };
+      if (key === 'userPrefs') return { language: 'fa' };
+      return null;
+    });
+
+    render(
+      <LanguageProvider>
+        <Probe />
+      </LanguageProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('language').textContent).toBe('en'));
+    expect(screen.getByTestId('greeting').textContent).toBe('Welcome back');
+    expect(screen.getByTestId('dir').textContent).toBe('ltr');
+  });
+
+  it('re-checks the support-only English lock when currentUser changes via a storage event', async () => {
+    let currentUser: { id: string; role: string } | null = null;
+    (ls.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentUser') return currentUser;
+      if (key === 'userPrefs') return { language: 'fa' };
+      return null;
+    });
+
+    render(
+      <LanguageProvider>
+        <Probe />
+      </LanguageProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId('language').textContent).toBe('fa'));
+
+    currentUser = { id: 's1', role: 'support' };
+    fireEvent(window, new StorageEvent('storage', { key: 'currentUser' }));
+
+    await waitFor(() => expect(screen.getByTestId('language').textContent).toBe('en'));
+  });
+
   it('merges into the existing userPrefs object instead of clobbering it', async () => {
     (ls.getItem as any).mockReturnValue({ volume: 42, notifLimit: false });
 

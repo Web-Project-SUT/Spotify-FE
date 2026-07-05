@@ -71,6 +71,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (found) {
       setItem('currentUser', found);
       setUser(found);
+      // The native 'storage' event only fires in other tabs; dispatch it
+      // manually so LanguageContext (which forces English for support
+      // accounts) re-checks the newly logged-in user's role here too.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
+      }
       return found;
     }
     return null;
@@ -82,8 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('currentTrack');
       localStorage.removeItem('queue');
       // The native 'storage' event only fires in other tabs; dispatch it
-      // manually so Player (which listens for it) clears itself here too.
+      // manually so Player (which listens for it) clears itself, and
+      // LanguageContext re-checks the (now logged-out) user, here too.
       window.dispatchEvent(new StorageEvent('storage', { key: 'currentTrack' }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
     }
     setUser(null);
   }, []);
@@ -113,6 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     addRecord('users', newUser);
     setItem('currentUser', newUser);
     setUser(newUser);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
+    }
     return newUser;
   }, []);
 
