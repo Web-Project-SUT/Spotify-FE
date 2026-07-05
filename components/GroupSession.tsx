@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getItem, setItem } from '../utils/localStorage';
 import { GroupSessionData, Song } from '../utils/types';
 import { getCurrentUser } from '../utils/auth';
+import { useLanguage } from '../context/LanguageContext';
 
 // Phase 1 simulates "real-time" group listening across browser tabs via
 // the localStorage 'storage' event. In Phase 2 this is replaced by a real
@@ -11,6 +12,7 @@ import { getCurrentUser } from '../utils/auth';
 const SESSION_KEY = 'groupSession';
 
 export default function GroupSession() {
+  const { t } = useLanguage();
   const [session, setSession] = useState<GroupSessionData | null>(null);
   const [userId, setUserId] = useState<string>('');
   const [copied, setCopied] = useState(false);
@@ -98,24 +100,24 @@ export default function GroupSession() {
 
   return (
     <div className="bg-gray-900 p-6 rounded-lg text-white border border-gray-700 max-w-md">
-      <h2 className="text-xl font-bold mb-4">Group session</h2>
+      <h2 className="text-xl font-bold mb-4">{t('group.title')}</h2>
 
       {!session ? (
         <button onClick={createGroup} className="bg-green-600 px-4 py-2 rounded font-bold">
-          Create group
+          {t('group.createGroup')}
         </button>
       ) : (
         <div className="space-y-4">
           <div className="text-sm">
-            <p className="text-gray-400">Session ID: <span className="text-white">{session.id}</span></p>
-            <p className="text-gray-400">Members: <span className="text-white">{session.members.length}</span></p>
+            <p className="text-gray-400">{t('group.sessionId')} <span className="text-white">{session.id}</span></p>
+            <p className="text-gray-400">{t('group.members')} <span className="text-white">{session.members.length}</span></p>
             <p className="text-gray-400">
-              Playback:{' '}
+              {t('group.playback')}{' '}
               <span className={session.isPlaying ? 'text-green-400' : 'text-yellow-400'}>
-                {session.isPlaying ? 'Playing' : 'Paused'}
+                {session.isPlaying ? t('group.playing') : t('group.paused')}
               </span>
             </p>
-            {isHost && <span className="text-xs text-indigo-400">You are the host</span>}
+            {isHost && <span className="text-xs text-indigo-400">{t('group.youAreHost')}</span>}
           </div>
 
           <div className="flex items-center gap-2">
@@ -123,25 +125,25 @@ export default function GroupSession() {
               onClick={copyInvite}
               className="text-xs bg-gray-700 px-3 py-2 rounded hover:bg-gray-600"
             >
-              {copied ? 'Copied!' : 'Copy invite link'}
+              {copied ? t('group.copied') : t('group.copyInviteLink')}
             </button>
           </div>
 
           {isMember ? (
             <div className="flex flex-wrap gap-2">
               <button onClick={togglePlay} className="bg-blue-600 px-4 py-2 rounded text-sm">
-                {session.isPlaying ? 'Pause for all' : 'Play for all'}
+                {session.isPlaying ? t('group.pauseForAll') : t('group.playForAll')}
               </button>
               <button onClick={playCurrentTrack} className="bg-indigo-600 px-4 py-2 rounded text-sm">
-                Share current track
+                {t('group.shareCurrentTrack')}
               </button>
               <button onClick={leaveGroup} className="bg-red-600 px-4 py-2 rounded text-sm">
-                Leave group
+                {t('group.leaveGroup')}
               </button>
             </div>
           ) : (
             <button onClick={joinGroup} className="bg-green-600 px-4 py-2 rounded text-sm">
-              Join group
+              {t('group.joinGroup')}
             </button>
           )}
         </div>

@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import GroupSession from './GroupSession';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 import * as authUtils from '../utils/auth';
 
@@ -14,6 +15,14 @@ vi.mock('../utils/localStorage', () => ({
 vi.mock('../utils/auth', () => ({
   getCurrentUser: vi.fn(),
 }));
+
+function renderComponent() {
+  return render(
+    <LanguageProvider>
+      <GroupSession />
+    </LanguageProvider>
+  );
+}
 
 describe('GroupSession', () => {
   beforeEach(() => {
@@ -28,7 +37,7 @@ describe('GroupSession', () => {
   it('creates a group with the real user as host and sole member', async () => {
     (localStorageUtils.getItem as any).mockReturnValue(null);
 
-    render(<GroupSession />);
+    renderComponent();
 
     fireEvent.click(screen.getByText('Create group'));
 
@@ -48,7 +57,7 @@ describe('GroupSession', () => {
         : null
     );
 
-    render(<GroupSession />);
+    renderComponent();
 
     fireEvent.click(screen.getByText('Join group'));
 
@@ -65,7 +74,7 @@ describe('GroupSession', () => {
         : null
     );
 
-    render(<GroupSession />);
+    renderComponent();
 
     fireEvent.click(screen.getByText('Play for all'));
 
@@ -83,7 +92,7 @@ describe('GroupSession', () => {
         : null
     );
 
-    render(<GroupSession />);
+    renderComponent();
 
     fireEvent.click(screen.getByText('Leave group'));
 
@@ -99,7 +108,7 @@ describe('GroupSession', () => {
         : null
     );
 
-    render(<GroupSession />);
+    renderComponent();
 
     fireEvent.click(screen.getByText('Leave group'));
 

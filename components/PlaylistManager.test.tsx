@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import PlaylistManager from './PlaylistManager';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 
 vi.mock('../utils/localStorage', () => ({
@@ -11,6 +12,14 @@ vi.mock('../utils/localStorage', () => ({
   addRecord: vi.fn(),
   deleteRecord: vi.fn(),
 }));
+
+function renderComponent() {
+  return render(
+    <LanguageProvider>
+      <PlaylistManager />
+    </LanguageProvider>
+  );
+}
 
 const alertMock = vi.fn();
 
@@ -31,7 +40,7 @@ describe('PlaylistManager', () => {
       return null;
     });
 
-    render(<PlaylistManager />);
+    renderComponent();
 
     await waitFor(() => expect(screen.getByText(/No playlists yet/i)).toBeDefined());
 
@@ -54,7 +63,7 @@ describe('PlaylistManager', () => {
       return null;
     });
 
-    render(<PlaylistManager />);
+    renderComponent();
     await waitFor(() => expect(screen.getByText('6 / 6')).toBeDefined());
 
     fireEvent.click(screen.getByText('Create'));
@@ -73,7 +82,7 @@ describe('PlaylistManager', () => {
       return null;
     });
 
-    render(<PlaylistManager />);
+    renderComponent();
     await waitFor(() => expect(screen.getByText('99 / 100')).toBeDefined());
 
     fireEvent.click(screen.getByText('Create'));
@@ -92,7 +101,7 @@ describe('PlaylistManager', () => {
       return null;
     });
 
-    render(<PlaylistManager />);
+    renderComponent();
     await waitFor(() => expect(screen.getByText('250 / ∞')).toBeDefined());
 
     fireEvent.click(screen.getByText('Create'));
@@ -104,7 +113,7 @@ describe('PlaylistManager', () => {
   it('does not crash and prompts login when there is no current user', async () => {
     (localStorageUtils.getItem as any).mockImplementation(() => null);
 
-    render(<PlaylistManager />);
+    renderComponent();
 
     await waitFor(() => {
       expect(screen.getByText(/Log in to manage playlists/i)).toBeDefined();

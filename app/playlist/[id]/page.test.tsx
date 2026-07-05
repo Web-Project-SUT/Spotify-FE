@@ -3,6 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import PlaylistPage from './page';
+import { LanguageProvider } from '../../../context/LanguageContext';
 import * as ls from '../../../utils/localStorage';
 
 const pushMock = vi.fn();
@@ -18,6 +19,14 @@ vi.mock('../../../utils/localStorage', () => ({
   setItem: vi.fn(),
   updateRecord: vi.fn(),
 }));
+
+function renderPage() {
+  return render(
+    <LanguageProvider>
+      <PlaylistPage />
+    </LanguageProvider>
+  );
+}
 
 const playlists = [{ id: 'pl1', userId: 'u1', title: 'Chill Mix', songIds: ['song1', 'song2'] }];
 const songs = [
@@ -38,7 +47,7 @@ describe('Playlist detail page', () => {
   afterEach(() => cleanup());
 
   it("resolves and lists the playlist's tracks from songIds", async () => {
-    render(<PlaylistPage />);
+    renderPage();
 
     await waitFor(() => expect(screen.getByText('Chill Mix')).toBeDefined());
     expect(screen.getByText('Neon Skyline')).toBeDefined();
@@ -52,13 +61,13 @@ describe('Playlist detail page', () => {
       return null;
     });
 
-    render(<PlaylistPage />);
+    renderPage();
 
     await waitFor(() => expect(screen.getByText('Playlist not found')).toBeDefined());
   });
 
   it('playing a track sets currentTrack, stamps lastPlayedAt, and navigates to the player', async () => {
-    render(<PlaylistPage />);
+    renderPage();
 
     await waitFor(() => expect(screen.getByText('Neon Skyline')).toBeDefined());
     fireEvent.click(screen.getByText('Neon Skyline'));
