@@ -93,8 +93,11 @@ render a user's name (`Sidebar`, `/home`, `/profile`) prefer `displayName`, fall
 `app/profile/[id]` (any user, mirrors `app/artist/[id]`) — so own-profile and other-user views never diverge.
 It shows avatar, display name, `@username`, tier badge, and a follower/following/streams-today stat grid
 (streams-today comes from `getDailyStreams`). When the viewer is looking at their **own** profile it shows the
-**Edit** form (display name/email; avatar upload gated to silver+ via `getTier`, matching the Phase-2 limits
-table); on **another** user's profile it shows a **Follow/Unfollow** button. Follow writes go through the
+**Edit** form (display name/email; an optional new password + confirm field pair, where leaving both blank
+keeps the current password and a mismatch shows a per-field error via the `Input` `error` prop, persisted
+through the same `updateRecord('users', id, …)` + `currentUser`/`refresh()` path as display name/email; avatar
+upload gated to silver+ via `getTier`, matching the Phase-2 limits table); on **another** user's profile it
+shows a **Follow/Unfollow** button. Follow writes go through the
 shared `toggleFollow(viewer, targetId, targetFollowers)` helper in `utils/follow.ts`, which bumps the target's
 `followers` and updates the viewer's `following[]` in one place — `ArtistProfile.tsx` uses the same helper, so
 don't re-derive follower/following mutations inline in either component.

@@ -30,6 +30,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwError, setPwError] = useState('');
 
   useEffect(() => {
     // Seed defensively: React runs this child effect before the parent
@@ -73,14 +76,37 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const canChangeAvatar = tier !== 'basic';
 
   const save = () => {
-    updateRecord('users', profileUser.id, { displayName, email });
-    const updated = { ...profileUser, displayName, email };
+    if (password && password !== confirmPassword) {
+      setPwError('Passwords do not match');
+      return;
+    }
+    setPwError('');
+    const payload: Partial<User> = { displayName, email };
+    if (password) payload.password = password;
+    updateRecord('users', profileUser.id, payload);
+    const updated = { ...profileUser, ...payload };
     setProfileUser(updated);
     if (isSelf) {
       setItem('currentUser', updated);
       refresh();
     }
+    setPassword('');
+    setConfirmPassword('');
     setEditing(false);
+  };
+
+  const cancelEdit = () => {
+    setPassword('');
+    setConfirmPassword('');
+    setPwError('');
+    setEditing(false);
+  };
+
+  const startEdit = () => {
+    setPassword('');
+    setConfirmPassword('');
+    setPwError('');
+    setEditing(true);
   };
 
   const handleFollowToggle = () => {
@@ -128,8 +154,29 @@ export default function UserProfile({ userId }: UserProfileProps) {
       {isSelf ? (
         editing ? (
           <div className="space-y-3 bg-surface-2 p-6 rounded-lg">
-            <Input label="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-            <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              label="Display name"
+              name="displayName"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+            <Input label="Email" name="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              label="New password"
+              name="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Leave blank to keep current"
+            />
+            <Input
+              label="Confirm new password"
+              name="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              error={pwError}
+            />
             <div>
               <label className="block text-sm font-bold mb-1">Profile photo</label>
               {canChangeAvatar ? (
@@ -140,13 +187,13 @@ export default function UserProfile({ userId }: UserProfileProps) {
             </div>
             <div className="flex gap-2">
               <Button onClick={save}>Save</Button>
-              <Button variant="ghost" onClick={() => setEditing(false)}>
+              <Button variant="ghost" onClick={cancelEdit}>
                 Cancel
               </Button>
             </div>
           </div>
         ) : (
-          <Button onClick={() => setEditing(true)}>Edit profile</Button>
+          <Button onClick={startEdit}>Edit profile</Button>
         )
       ) : (
         <Button variant={isFollowing ? 'secondary' : 'primary'} onClick={handleFollowToggle}>
