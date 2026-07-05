@@ -7,10 +7,12 @@ import { getItem, setItem, updateRecord } from '../../../utils/localStorage';
 import { Playlist, Song, User } from '../../../utils/types';
 import { Button, Card, EmptyState } from '../../../components/ui';
 import AddToPlaylistMenu from '../../../components/AddToPlaylistMenu';
+import { useLanguage } from '../../../context/LanguageContext';
 
 function PlaylistContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useLanguage();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<Song[]>([]);
   const [artists, setArtists] = useState<Record<string, string>>({});
@@ -29,7 +31,7 @@ function PlaylistContent() {
       const users: User[] = getItem('users') || [];
       const map: Record<string, string> = {};
       users.forEach((u) => {
-        if (u.role === 'artist') map[u.id] = u.stageName || 'Unknown artist';
+        if (u.role === 'artist' && u.stageName) map[u.id] = u.stageName;
       });
       setArtists(map);
     }
@@ -50,7 +52,7 @@ function PlaylistContent() {
   };
 
   if (notFound) {
-    return <EmptyState icon="🎵" title="Playlist not found" />;
+    return <EmptyState icon="🎵" title={t('playlist.notFound')} />;
   }
 
   if (!playlist) return null;
@@ -62,21 +64,23 @@ function PlaylistContent() {
           🎵
         </div>
         <div>
-          <p className="text-muted text-sm uppercase">Playlist</p>
+          <p className="text-muted text-sm uppercase">{t('playlist.eyebrow')}</p>
           <h1 className="text-4xl font-bold">{playlist.title}</h1>
-          <p className="text-muted mt-2">{tracks.length} songs</p>
+          <p className="text-muted mt-2">
+            {tracks.length} {t('playlist.songsLabel')}
+          </p>
         </div>
       </div>
 
       {tracks.length > 0 && (
-        <Button className="mb-6" onClick={() => play(tracks[0])}>Play all</Button>
+        <Button className="mb-6" onClick={() => play(tracks[0])}>{t('playlist.playAll')}</Button>
       )}
 
       {tracks.length === 0 ? (
         <EmptyState
-          title="No songs in this playlist yet"
-          description="Add songs from the browse page."
-          action={<Button onClick={() => router.push('/albums')}>Browse songs</Button>}
+          title={t('playlist.emptyTitle')}
+          description={t('playlist.emptyDesc')}
+          action={<Button onClick={() => router.push('/albums')}>{t('playlist.browseSongs')}</Button>}
         />
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -93,7 +97,7 @@ function PlaylistContent() {
                 onClick={(e) => goToArtist(e, song.artistId)}
                 className="text-muted text-sm hover:underline truncate block"
               >
-                {artists[song.artistId] || 'Unknown artist'}
+                {artists[song.artistId] || t('browse.unknownArtist')}
               </button>
             </Card>
           ))}

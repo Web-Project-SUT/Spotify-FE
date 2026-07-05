@@ -6,8 +6,10 @@ import Link from 'next/link';
 import { getItem, addRecord, deleteRecord } from '../utils/localStorage';
 import { Playlist, User } from '../utils/types';
 import { getCurrentUser, getPlaylistLimit, getTier } from '../utils/auth';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function PlaylistManager() {
+  const { t } = useLanguage();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [newTitle, setNewTitle] = useState('');
   const [user, setUser] = useState<User | null>(null);
@@ -30,11 +32,7 @@ export default function PlaylistManager() {
 
     // Tier limit per spec: basic = 6, silver = 100, gold = unlimited
     if (playlists.length >= limit) {
-      alert(
-        tier === 'basic'
-          ? 'You have reached the 6-playlist limit for basic. Upgrade to silver or gold for more.'
-          : 'You have reached the 100-playlist limit for silver. Upgrade to gold for unlimited playlists.'
-      );
+      alert(tier === 'basic' ? t('playlist.basicLimitReached') : t('playlist.silverLimitReached'));
       return;
     }
 
@@ -58,13 +56,13 @@ export default function PlaylistManager() {
   if (!loaded) return null;
 
   if (!user) {
-    return <div className="p-6 bg-gray-900 text-gray-400 rounded-xl">Log in to manage playlists.</div>;
+    return <div className="p-6 bg-gray-900 text-gray-400 rounded-xl">{t('playlist.loginToManage')}</div>;
   }
 
   return (
     <div className="p-6 bg-gray-900 text-white rounded-xl">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Your Playlists</h2>
+        <h2 className="text-xl font-bold">{t('playlist.yourPlaylists')}</h2>
         <span className="text-xs text-gray-400">
           {playlists.length} / {limit === Infinity ? '∞' : limit}
         </span>
@@ -72,17 +70,17 @@ export default function PlaylistManager() {
       <div className="flex gap-2 mb-4">
         <input
           className="bg-gray-800 p-2 rounded flex-1"
-          placeholder="New playlist name..."
+          placeholder={t('playlist.namePlaceholder')}
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
         />
         <button onClick={handleCreate} className="bg-green-500 px-4 py-2 rounded font-bold">
-          Create
+          {t('playlist.create')}
         </button>
       </div>
 
       {playlists.length === 0 ? (
-        <div className="text-center py-10 text-gray-500 italic">No playlists yet. Create one!</div>
+        <div className="text-center py-10 text-gray-500 italic">{t('playlist.noPlaylistsYet')}</div>
       ) : (
         <ul className="space-y-2">
           {playlists.map((p) => (
@@ -91,7 +89,7 @@ export default function PlaylistManager() {
                 {p.title}
               </Link>
               <button onClick={() => handleDelete(p.id)} className="text-red-400 text-sm">
-                Delete
+                {t('playlist.delete')}
               </button>
             </li>
           ))}

@@ -3,11 +3,20 @@ import React from 'react';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import AlbumsBrowse from './AlbumsBrowse';
+import { LanguageProvider } from '../context/LanguageContext';
 import * as ls from '../utils/localStorage';
 
 const pushMock = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock }) }));
 vi.mock('../utils/localStorage', () => ({ getItem: vi.fn(), setItem: vi.fn() }));
+
+function renderComponent() {
+  return render(
+    <LanguageProvider>
+      <AlbumsBrowse />
+    </LanguageProvider>
+  );
+}
 
 const songs = [
   { id: 's1', title: 'Neon Skyline', artistId: 'a1', cover: '🎵', plays: 100, listenerCount: 5000, year: 2024 },
@@ -33,14 +42,14 @@ describe('AlbumsBrowse', () => {
   afterEach(() => cleanup());
 
   it('renders albums and songs with artist names', async () => {
-    render(<AlbumsBrowse />);
+    renderComponent();
     await waitFor(() => expect(screen.getByText('Skyline Echoes')).toBeDefined());
     expect(screen.getByText('Neon Skyline')).toBeDefined();
     expect(screen.getAllByText('Nova Ray').length).toBeGreaterThan(0);
   });
 
   it('filters by search query against song and artist names', async () => {
-    render(<AlbumsBrowse />);
+    renderComponent();
     await waitFor(() => expect(screen.getByText('Neon Skyline')).toBeDefined());
 
     fireEvent.change(screen.getByPlaceholderText(/Search/i), { target: { value: 'Slow' } });
@@ -50,7 +59,7 @@ describe('AlbumsBrowse', () => {
   });
 
   it('shows an empty state when nothing matches', async () => {
-    render(<AlbumsBrowse />);
+    renderComponent();
     await waitFor(() => expect(screen.getByText('Neon Skyline')).toBeDefined());
 
     fireEvent.change(screen.getByPlaceholderText(/Search/i), { target: { value: 'zzzzz' } });
@@ -59,7 +68,7 @@ describe('AlbumsBrowse', () => {
   });
 
   it('plays a song and navigates to the player', async () => {
-    render(<AlbumsBrowse />);
+    renderComponent();
     await waitFor(() => expect(screen.getByText('Neon Skyline')).toBeDefined());
 
     fireEvent.click(screen.getByText('Neon Skyline'));
