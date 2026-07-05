@@ -139,6 +139,26 @@ export const initializeMockDatabase = (): void => {
     setItem('listeningHistory', ['song1', 'song2']);
   }
 
+  if (!getItem('tickets')) {
+    setItem('tickets', [
+      {
+        id: 'T-1001',
+        userId: 'u1',
+        userName: 'listener@demo.com',
+        subject: 'Cannot play downloaded songs',
+        date: new Date().toISOString().slice(0, 10),
+        status: 'open',
+        messages: [
+          {
+            from: 'user',
+            text: 'My downloads stopped working after the last update.',
+            at: new Date().toISOString(),
+          },
+        ],
+      },
+    ]);
+  }
+
   if (!getItem('listeningStats')) {
     setItem('listeningStats', {
       u1: { [new Date().toISOString().slice(0, 10)]: 12 },

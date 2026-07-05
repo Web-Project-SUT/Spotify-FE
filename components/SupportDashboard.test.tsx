@@ -17,6 +17,20 @@ const users = [
   { id: 'a1', role: 'artist', stageName: 'Nova', email: 'nova@demo.com', status: 'active' },
 ];
 
+const tickets = [
+  {
+    id: 'T-1001',
+    userId: 'u1',
+    userName: 'listener@demo.com',
+    subject: 'Cannot play downloaded songs',
+    date: '2026-01-01',
+    status: 'open',
+    messages: [
+      { from: 'user', text: 'My downloads stopped working after the last update.', at: '2026-01-01T00:00:00.000Z' },
+    ],
+  },
+];
+
 function renderDashboard() {
   return render(<SupportDashboard />);
 }
@@ -26,7 +40,7 @@ describe('SupportDashboard', () => {
     vi.clearAllMocks();
     (ls.getItem as any).mockImplementation((key: string) => {
       if (key === 'users') return users;
-      if (key === 'tickets') return null;
+      if (key === 'tickets') return tickets;
       return [];
     });
   });
@@ -79,5 +93,41 @@ describe('SupportDashboard', () => {
 
     fireEvent.click(screen.getByText(/Cannot play downloaded songs/i));
     expect(screen.getByPlaceholderText(/Type a reply/i)).toBeDefined();
+  });
+
+  it('replying to a ticket updates it and notifies the creator', async () => {
+    renderDashboard();
+    await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());
+
+    fireEvent.click(screen.getByText('Support tickets'));
+    await waitFor(() => expect(screen.getByText(/Cannot play downloaded songs/i)).toBeDefined());
+    fireEvent.click(screen.getByText(/Cannot play downloaded songs/i));
+
+    const input = screen.getByPlaceholderText(/Type a reply/i);
+    fireEvent.change(input, { target: { value: 'Try clearing your cache.' } });
+    fireEvent.click(screen.getByText('Send'));
+
+    expect(ls.updateRecord).toHaveBeenCalledWith(
+      'tickets',
+      'T-1001',
+      expect.objectContaining({ status: 'answered', messages: expect.any(Array) })
+    );
+    expect(ls.addRecord).toHaveBeenCalledWith(
+      'notifications',
+      expect.objectContaining({ userId: 'u1', type: 'support' })
+    );
+  });
+
+  it('closing a ticket sets its status to closed', async () => {
+    renderDashboard();
+    await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());
+
+    fireEvent.click(screen.getByText('Support tickets'));
+    await waitFor(() => expect(screen.getByText(/Cannot play downloaded songs/i)).toBeDefined());
+    fireEvent.click(screen.getByText(/Cannot play downloaded songs/i));
+
+    fireEvent.click(screen.getByText('Close ticket'));
+
+    expect(ls.updateRecord).toHaveBeenCalledWith('tickets', 'T-1001', { status: 'closed' });
   });
 });

@@ -1,20 +1,11 @@
 // components/SupportDashboard.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-import { getItem, setItem, updateRecord, addRecord } from '../utils/localStorage';
-import { User } from '../utils/types';
-import { Badge, Button, EmptyState } from './ui';
+import { getItem, updateRecord, addRecord } from '../utils/localStorage';
+import { User, Ticket } from '../utils/types';
+import { Badge, Button, EmptyState, Input } from './ui';
 
 type Tab = 'approvals' | 'tickets';
-
-interface Ticket {
-  id: string;
-  userName: string;
-  subject: string;
-  date: string;
-  status: 'open' | 'answered' | 'closed';
-  messages: { from: 'user' | 'support'; text: string }[];
-}
 
 export default function SupportDashboard() {
   const [tab, setTab] = useState<Tab>('approvals');
@@ -28,19 +19,7 @@ export default function SupportDashboard() {
   useEffect(() => {
     const users: User[] = getItem('users') || [];
     setPendingArtists(users.filter((u) => u.role === 'artist' && u.status === 'pending'));
-
-    const storedTickets: Ticket[] = getItem('tickets') || [
-      {
-        id: 'T-1001',
-        userName: 'listener@demo.com',
-        subject: 'Cannot play downloaded songs',
-        date: new Date().toISOString().slice(0, 10),
-        status: 'open',
-        messages: [{ from: 'user', text: 'My downloads stopped working after the last update.' }],
-      },
-    ];
-    setTickets(storedTickets);
-    if (!getItem('tickets')) setItem('tickets', storedTickets);
+    setTickets(getItem('tickets') || []);
   }, []);
 
   const decideArtist = (artist: User, approve: boolean, reason?: string) => {
@@ -69,13 +48,32 @@ export default function SupportDashboard() {
     const updated: Ticket = {
       ...openTicket,
       status: 'answered',
-      messages: [...openTicket.messages, { from: 'support', text: reply.trim() }],
+      messages: [
+        ...openTicket.messages,
+        { from: 'support', text: reply.trim(), at: new Date().toISOString() },
+      ],
     };
-    const nextTickets = tickets.map((t) => (t.id === updated.id ? updated : t));
-    setTickets(nextTickets);
-    setItem('tickets', nextTickets);
+    updateRecord('tickets', updated.id, { status: updated.status, messages: updated.messages });
+    addRecord('notifications', {
+      id: `n-${Date.now()}`,
+      userId: updated.userId,
+      title: 'Support replied to your ticket',
+      message: `Re: ${updated.subject}`,
+      type: 'support',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
+    setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setOpenTicket(updated);
     setReply('');
+  };
+
+  const closeTicket = () => {
+    if (!openTicket) return;
+    const updated: Ticket = { ...openTicket, status: 'closed' };
+    updateRecord('tickets', updated.id, { status: 'closed' });
+    setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+    setOpenTicket(updated);
   };
 
   return (
@@ -135,26 +133,39 @@ export default function SupportDashboard() {
         )
       ) : openTicket ? (
         <div className="max-w-xl">
-          <button onClick={() => setOpenTicket(null)} className="text-muted text-sm mb-4 hover:text-white">
-            ← Back to tickets
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setOpenTicket(null)} className="text-muted text-sm hover:text-white">
+              ← Back to tickets
+            </button>
+            {openTicket.status !== 'closed' && (
+              <Button variant="ghost" size="sm" onClick={closeTicket}>
+                Close ticket
+              </Button>
+            )}
+          </div>
           <h2 className="text-lg font-bold mb-1">{openTicket.subject}</h2>
-          <p className="text-muted text-sm mb-4">{openTicket.userName} · {openTicket.id}</p>
+          <p className="text-muted text-sm mb-4">
+            {openTicket.userName} · {openTicket.id} · <Badge tone={openTicket.status === 'open' ? 'info' : openTicket.status === 'answered' ? 'success' : 'neutral'}>{openTicket.status}</Badge>
+          </p>
           <div className="space-y-2 mb-4">
             {openTicket.messages.map((m, i) => (
               <div key={i} className={`p-3 rounded-lg max-w-[80%] ${m.from === 'support' ? 'bg-accent/20 ml-auto' : 'bg-surface-3'}`}>
-                <p className="text-xs text-muted mb-1">{m.from}</p>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-xs text-muted">{m.from}</p>
+                  <p className="text-xs text-muted">{new Date(m.at).toLocaleString()}</p>
+                </div>
                 <p className="text-sm">{m.text}</p>
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
-            <input
-              value={reply}
-              onChange={(e) => setReply(e.target.value)}
-              placeholder="Type a reply…"
-              className="flex-1 bg-surface-2 border border-border rounded px-3 py-2"
-            />
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <Input
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                placeholder="Type a reply…"
+              />
+            </div>
             <Button onClick={sendReply}>Send</Button>
           </div>
         </div>

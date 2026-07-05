@@ -20,6 +20,7 @@ const NAV: NavItem[] = [
   { href: '/albums', labelKey: 'nav.browse', icon: '🔍', roles: ['listener'] },
   { href: '/playlists', labelKey: 'nav.playlists', icon: '📚', roles: ['listener'] },
   { href: '/notifications', labelKey: 'nav.notifications', icon: '🔔' },
+  { href: '/help', labelKey: 'nav.help', icon: '🎧', roles: ['listener', 'artist'] },
   { href: '/settings', labelKey: 'nav.settings', icon: '⚙️', roles: ['listener', 'artist'] },
   { href: '/artist-panel', labelKey: 'nav.myWorks', icon: '🎨', roles: ['artist'] },
   { href: '/artist-panel/upload', labelKey: 'nav.upload', icon: '⬆️', roles: ['artist'] },
