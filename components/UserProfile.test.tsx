@@ -143,4 +143,56 @@ describe('UserProfile', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: /Following/i })).toBeDefined());
   });
+
+  it('password change persists to updateRecord', async () => {
+    mockDb([basicSelf], basicSelf);
+
+    render(<UserProfile userId="u1" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Edit profile/i })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /Edit profile/i }));
+
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'newpass123' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'newpass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save/i }));
+
+    expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', {
+      displayName: 'Demo Listener',
+      email: 'listener@demo.com',
+      password: 'newpass123',
+    });
+  });
+
+  it('mismatched passwords block save', async () => {
+    mockDb([basicSelf], basicSelf);
+
+    render(<UserProfile userId="u1" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Edit profile/i })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /Edit profile/i }));
+
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'newpass123' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'different' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save/i }));
+
+    expect(screen.getByText('Passwords do not match')).toBeDefined();
+    expect(localStorageUtils.updateRecord).not.toHaveBeenCalled();
+  });
+
+  it('leaves password unchanged when the fields are left blank', async () => {
+    mockDb([basicSelf], basicSelf);
+
+    render(<UserProfile userId="u1" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Edit profile/i })).toBeDefined());
+    fireEvent.click(screen.getByRole('button', { name: /Edit profile/i }));
+
+    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Renamed Listener' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save/i }));
+
+    expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', {
+      displayName: 'Renamed Listener',
+      email: 'listener@demo.com',
+    });
+  });
 });
