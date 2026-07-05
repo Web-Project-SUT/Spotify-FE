@@ -75,6 +75,24 @@ export interface Notification {
   isRead: boolean;
   createdAt: string;
 }
+export type TicketStatus = 'open' | 'answered' | 'closed';
+
+export interface TicketMessage {
+  from: 'user' | 'support';
+  text: string;
+  at: string; // ISO timestamp
+}
+
+export interface Ticket {
+  id: string;
+  userId: string; // creator's user id — target for reply notifications
+  userName: string; // display label for the table (displayName || stageName || email)
+  subject: string;
+  date: string; // yyyy-mm-dd created date
+  status: TicketStatus;
+  messages: TicketMessage[];
+}
+
 export interface Payout {
   id: string;
   artistId: string;

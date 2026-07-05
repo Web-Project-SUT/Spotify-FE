@@ -22,6 +22,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'nav.browse': 'Browse',
     'nav.playlists': 'Playlists',
     'nav.notifications': 'Notifications',
+    'nav.help': 'Help',
     'nav.settings': 'Settings',
     'nav.myWorks': 'My works',
     'nav.upload': 'Upload',

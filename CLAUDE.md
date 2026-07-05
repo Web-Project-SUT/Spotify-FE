@@ -107,6 +107,26 @@ so the queue is proactively surfaced rather than only discoverable by visiting t
 notifications); the support dashboard's own chrome is also English-only by design (see the i18n paragraph
 above).
 
+**Support ticket system** is a shared, typed model rather than a component-local one: `Ticket`,
+`TicketMessage`, and `TicketStatus` (`open | answered | closed`) live in `utils/types.ts`, and `tickets` is
+seeded in `initializeMockDatabase()` (`utils/localStorage.ts`) like every other collection, so it resets
+with the rest of the mock DB instead of being lazily seeded inside a component. All reads/writes go through
+`getItem('tickets')` + `addRecord`/`updateRecord('tickets', …)` — never whole-array `setItem` — keeping the
+Phase-2 CRUD seam intact. It's a two-sided flow: `/help` (`components/HelpCenter.tsx`, `AppShell
+allow={['listener','artist']}`) lets a listener/artist create a ticket and follow their own thread
+(`getItem('tickets')` filtered to `userId === currentUser.id`); `/support`'s "Support tickets" tab
+(`components/SupportDashboard.tsx`) is unchanged as the staff-facing table + chat-thread view for
+replying/closing. Status transitions: a new ticket starts `open`; a support reply sets `answered`; support
+clicking **Close ticket** sets `closed`; the creator posting a follow-up reopens it to `open`. Notifications
+flow both directions: creating a ticket fans out a `type: 'support'` notification to every
+`role === 'support' || role === 'admin'` user, reusing the exact fan-out pattern `registerArtist`
+(`context/AuthContext.tsx`) already uses for artist applications; a support reply notifies the ticket's
+creator the same way. Notification bodies stay plain English, matching every other notification type. Like
+the rest of the support panel, this whole feature (`HelpCenter.tsx` and the ticket parts of
+`SupportDashboard.tsx`) is **English-only by design** — the sole exception is the new `/help` Sidebar entry,
+whose `nav.help` key is only defined in the `en` block of `utils/i18n.ts` and relies on `translate()`'s
+existing fallback-to-`en` behavior for `fa`/`es`.
+
 **Route protection:** pages that require auth wrap their content in `<AppShell allow={[...roles]}>`
 (`components/AppShell.tsx`), which renders the `Sidebar` + a `<ProtectedRoute>` boundary. `ProtectedRoute`
 redirects unauthenticated users to `/login` and redirects users whose role isn't in `allow` back to `/home`.
