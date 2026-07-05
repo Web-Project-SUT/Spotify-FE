@@ -13,7 +13,13 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
-const readLanguage = (): Language => getItem('userPrefs')?.language ?? 'en';
+// Support accounts have no access to the language switcher (no Settings
+// page) and the panel is meant to stay English-only regardless of whatever
+// language a listener/artist previously set on this shared device.
+const readLanguage = (): Language => {
+  if (getItem('currentUser')?.role === 'support') return 'en';
+  return getItem('userPrefs')?.language ?? 'en';
+};
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // Starts at 'en' so the server-rendered markup and the first client render

@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { getItem, setItem, updateRecord, addRecord } from '../utils/localStorage';
 import { User } from '../utils/types';
 import { Badge, Button, EmptyState } from './ui';
-import { useLanguage } from '../context/LanguageContext';
 
 type Tab = 'approvals' | 'tickets';
 
@@ -18,7 +17,6 @@ interface Ticket {
 }
 
 export default function SupportDashboard() {
-  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>('approvals');
   const [pendingArtists, setPendingArtists] = useState<User[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -82,34 +80,34 @@ export default function SupportDashboard() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">{t('support.title')}</h1>
+      <h1 className="text-2xl font-bold mb-6">Support</h1>
 
       <div className="flex gap-2 mb-6 border-b border-border">
         <button
           onClick={() => setTab('approvals')}
           className={`px-4 py-2 text-sm font-bold border-b-2 ${tab === 'approvals' ? 'border-accent text-white' : 'border-transparent text-muted'}`}
         >
-          {t('support.tabApprovals')}
+          Artist approvals
         </button>
         <button
           onClick={() => setTab('tickets')}
           className={`px-4 py-2 text-sm font-bold border-b-2 ${tab === 'tickets' ? 'border-accent text-white' : 'border-transparent text-muted'}`}
         >
-          {t('support.tabTickets')}
+          Support tickets
         </button>
       </div>
 
       {tab === 'approvals' ? (
         pendingArtists.length === 0 ? (
-          <EmptyState icon="✅" title={t('support.noPendingTitle')} description={t('support.noPendingDesc')} />
+          <EmptyState icon="✅" title="No pending applications" description="All artist applications have been reviewed." />
         ) : (
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border text-muted text-sm">
-                <th className="p-2">{t('support.stageName')}</th>
-                <th className="p-2">{t('support.email')}</th>
-                <th className="p-2">{t('support.portfolio')}</th>
-                <th className="p-2">{t('support.decision')}</th>
+                <th className="p-2">Stage name</th>
+                <th className="p-2">Email</th>
+                <th className="p-2">Portfolio</th>
+                <th className="p-2">Decision</th>
               </tr>
             </thead>
             <tbody>
@@ -120,15 +118,15 @@ export default function SupportDashboard() {
                   <td className="p-2">
                     {a.portfolio ? (
                       <a href={a.portfolio} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                        {t('support.viewSamples')}
+                        View samples
                       </a>
                     ) : (
                       <span className="text-muted">—</span>
                     )}
                   </td>
                   <td className="p-2 flex gap-2">
-                    <Button size="sm" onClick={() => decideArtist(a, true)}>{t('support.approve')}</Button>
-                    <Button size="sm" variant="danger" onClick={() => setRejectTarget(a)}>{t('support.reject')}</Button>
+                    <Button size="sm" onClick={() => decideArtist(a, true)}>Approve</Button>
+                    <Button size="sm" variant="danger" onClick={() => setRejectTarget(a)}>Reject</Button>
                   </td>
                 </tr>
               ))}
@@ -138,7 +136,7 @@ export default function SupportDashboard() {
       ) : openTicket ? (
         <div className="max-w-xl">
           <button onClick={() => setOpenTicket(null)} className="text-muted text-sm mb-4 hover:text-white">
-            {t('support.backToTickets')}
+            ← Back to tickets
           </button>
           <h2 className="text-lg font-bold mb-1">{openTicket.subject}</h2>
           <p className="text-muted text-sm mb-4">{openTicket.userName} · {openTicket.id}</p>
@@ -154,21 +152,21 @@ export default function SupportDashboard() {
             <input
               value={reply}
               onChange={(e) => setReply(e.target.value)}
-              placeholder={t('support.replyPlaceholder')}
+              placeholder="Type a reply…"
               className="flex-1 bg-surface-2 border border-border rounded px-3 py-2"
             />
-            <Button onClick={sendReply}>{t('support.send')}</Button>
+            <Button onClick={sendReply}>Send</Button>
           </div>
         </div>
       ) : (
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-border text-muted text-sm">
-              <th className="p-2">{t('support.ticketId')}</th>
-              <th className="p-2">{t('support.ticketUser')}</th>
-              <th className="p-2">{t('support.ticketSubject')}</th>
-              <th className="p-2">{t('support.ticketDate')}</th>
-              <th className="p-2">{t('support.ticketStatus')}</th>
+              <th className="p-2">ID</th>
+              <th className="p-2">User</th>
+              <th className="p-2">Subject</th>
+              <th className="p-2">Date</th>
+              <th className="p-2">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -179,9 +177,7 @@ export default function SupportDashboard() {
                 <td className="p-2">{ticket.subject}</td>
                 <td className="p-2 text-muted">{ticket.date}</td>
                 <td className="p-2">
-                  <Badge tone={ticket.status === 'open' ? 'info' : ticket.status === 'answered' ? 'success' : 'neutral'}>
-                    {t(`support.status${ticket.status.charAt(0).toUpperCase()}${ticket.status.slice(1)}`)}
-                  </Badge>
+                  <Badge tone={ticket.status === 'open' ? 'info' : ticket.status === 'answered' ? 'success' : 'neutral'}>{ticket.status}</Badge>
                 </td>
               </tr>
             ))}
@@ -192,12 +188,12 @@ export default function SupportDashboard() {
       {rejectTarget && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-lg font-bold mb-4">{t('support.rejectModalTitle')}</h2>
-            <label className="block text-sm text-muted mb-2">{t('support.reasonLabel')}</label>
+            <h2 className="text-lg font-bold mb-4">Reject application</h2>
+            <label className="block text-sm text-muted mb-2">Reason for rejection</label>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder={t('support.reasonPlaceholder')}
+              placeholder="Explain why this application is being rejected…"
               className="w-full bg-surface-2 border border-border rounded px-3 py-2 mb-4 min-h-24"
             />
             <div className="flex justify-end gap-2">
@@ -208,10 +204,10 @@ export default function SupportDashboard() {
                   setRejectReason('');
                 }}
               >
-                {t('support.cancel')}
+                Cancel
               </Button>
               <Button variant="danger" onClick={confirmReject}>
-                {t('support.confirmRejection')}
+                Confirm rejection
               </Button>
             </div>
           </div>

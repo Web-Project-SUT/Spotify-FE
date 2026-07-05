@@ -74,15 +74,26 @@ off `userPrefs.language` in `localStorage` and synced across tabs via the `stora
 mechanism used by Player/GroupSession, not a new one. `LanguageProvider` also sets
 `document.documentElement.lang`/`dir` on every change, so the whole document flips to RTL for Persian, and it
 mounts outermost in `app/layout.tsx` (around `AuthProvider`) so every route can call `useLanguage()`. Core
-surfaces (`Sidebar`, `/settings`, `/home` + its row headers), the full support dashboard (both the "Artist
-approvals" and "Support tickets" tabs), the full artist panel (`ArtistStatsDashboard` — "My works" — and
-`UploadArtworkForm` — "Upload"), and `NotificationPanel`/`/notifications` (chrome only — notification
-title/message bodies stay plain English strings, matching the `support.*` precedent, since they're stored
-content rendered as-is rather than UI chrome) are wired through `t()`. Other pages still hardcode English and
-fall back to the `en` dictionary until migrated; do this incrementally rather than all at once. The `/login`
-and `/register` pages were deliberately migrated then **reverted** to hardcoded English — the assignment
-wants a single consistent login/sign-up experience regardless of the active language, so those two pages
-intentionally do not call `useLanguage()`/`t()`; don't re-migrate them without checking with the user first.
+surfaces (`Sidebar`, `/settings`, `/home` + its row headers), the full artist panel (`ArtistStatsDashboard` —
+"My works" — and `UploadArtworkForm` — "Upload"), and `NotificationPanel`/`/notifications` (chrome only —
+notification title/message bodies stay plain English strings since they're stored content rendered as-is
+rather than UI chrome) are wired through `t()`. Other pages still hardcode English and fall back to the `en`
+dictionary until migrated; do this incrementally rather than all at once. The `/login`, `/register`, and
+`/support` (`components/SupportDashboard.tsx`, both the "Artist approvals" and "Support tickets" tabs) pages
+were deliberately migrated then **reverted** to hardcoded English — the assignment wants a single consistent
+login/sign-up experience regardless of active language, and the user separately decided the support panel
+should stay English-only too — so these pages intentionally do not call `useLanguage()`/`t()`; don't
+re-migrate any of them without checking with the user first. Reverting `SupportDashboard.tsx`'s own copy
+wasn't enough on its own, though: `language` is a single shared `userPrefs.language` value in `localStorage`
+(not per-user), so `Sidebar`/`NotificationPanel` would otherwise keep rendering in whatever language a
+listener/artist last set even after logging into a support account on the same device. `LanguageContext`'s
+`readLanguage()` therefore special-cases `getItem('currentUser')?.role === 'support'` to force `'en'`
+regardless of `userPrefs`. Because the native `storage` event never fires in the tab that made the change,
+`login`/`logout`/`registerListener` in `AuthContext.tsx` each manually dispatch a synthetic
+`StorageEvent('storage', { key: 'currentUser' })` after mutating `currentUser` — the same pattern `logout`
+already used for `currentTrack` so `Player` clears itself same-tab — so `LanguageContext`'s existing
+`storage` listener re-derives the forced-English state the moment a support account logs in, without needing
+a full page reload.
 
 **Artist approval queue** (`components/SupportDashboard.tsx`, "Artist approvals" tab) lists
 `role === 'artist' && status === 'pending'` users from the `users` collection. **Approve** sets
@@ -93,7 +104,8 @@ artist via `addRecord('notifications', …)`. Separately, `registerArtist` (`con
 one `approval`-type notification to every `role === 'support' || role === 'admin'` user at registration time,
 so the queue is proactively surfaced rather than only discoverable by visiting the dashboard. Notification
 *bodies* stay plain English strings (rendered as-is by `NotificationPanel`, matching the existing seeded
-notifications) — i18n via `support.*` keys applies to the dashboard chrome, not stored notification content.
+notifications); the support dashboard's own chrome is also English-only by design (see the i18n paragraph
+above).
 
 **Route protection:** pages that require auth wrap their content in `<AppShell allow={[...roles]}>`
 (`components/AppShell.tsx`), which renders the `Sidebar` + a `<ProtectedRoute>` boundary. `ProtectedRoute`
