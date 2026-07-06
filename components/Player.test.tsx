@@ -9,6 +9,7 @@ vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
   recordDailyStream: vi.fn(),
+  recordListen: vi.fn(),
 }));
 
 afterEach(cleanup);

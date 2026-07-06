@@ -53,6 +53,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.topSongs': 'Top Songs',
     'home.noSongsAvailable': 'No songs available yet.',
     'home.recommendedForYou': 'Recommended for you',
+    'home.reasonGenre': 'Because you listened to {genre}',
+    'home.reasonTrending': 'Trending with other listeners',
     'home.nothingPlayedRecentlyTitle': 'Nothing played recently',
     'home.nothingPlayedRecentlyDesc': 'Play a song from one of your playlists to see it here.',
     'home.goToPlaylists': 'Go to your playlists',
@@ -201,6 +203,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.topSongs': 'برترین آهنگ‌ها',
     'home.noSongsAvailable': 'هنوز آهنگی موجود نیست.',
     'home.recommendedForYou': 'پیشنهاد شده برای شما',
+    'home.reasonGenre': 'چون به سبک {genre} گوش داده‌اید',
+    'home.reasonTrending': 'محبوب در بین سایر شنوندگان',
     'home.nothingPlayedRecentlyTitle': 'اخیراً چیزی پخش نشده',
     'home.nothingPlayedRecentlyDesc': 'یک آهنگ از یکی از پلی‌لیست‌هایتان پخش کنید تا اینجا نمایش داده شود.',
     'home.goToPlaylists': 'رفتن به پلی‌لیست‌ها',
@@ -349,6 +353,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'home.topSongs': 'Canciones más populares',
     'home.noSongsAvailable': 'Aún no hay canciones disponibles.',
     'home.recommendedForYou': 'Recomendado para ti',
+    'home.reasonGenre': 'Porque escuchaste {genre}',
+    'home.reasonTrending': 'Tendencia entre otros oyentes',
     'home.nothingPlayedRecentlyTitle': 'Nada reproducido recientemente',
     'home.nothingPlayedRecentlyDesc': 'Reproduce una canción de una de tus listas para verla aquí.',
     'home.goToPlaylists': 'Ir a tus listas de reproducción',
@@ -464,6 +470,16 @@ export const translations: Record<Language, Record<string, string>> = {
 };
 
 // Falls back to `en`, then to the raw key, so a missing translation never crashes.
-export const translate = (lang: Language, key: string): string => {
-  return translations[lang]?.[key] ?? translations.en[key] ?? key;
+// `params` interpolates `{name}`-style placeholders; a missing param leaves the
+// placeholder in place rather than throwing.
+export const translate = (
+  lang: Language,
+  key: string,
+  params?: Record<string, string | number>
+): string => {
+  const raw = translations[lang]?.[key] ?? translations.en[key] ?? key;
+  if (!params) return raw;
+  return raw.replace(/{(\w+)}/g, (match, name) =>
+    Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : match
+  );
 };

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { getItem, setItem, recordDailyStream } from '../utils/localStorage';
+import { getItem, setItem, recordDailyStream, recordListen } from '../utils/localStorage';
 import { Song } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
 
@@ -60,10 +60,12 @@ export default function Player() {
   // Count one daily stream for the current listener each time a new track
   // becomes current. Keyed on the song id so re-renders (or resuming the
   // same track) don't double-count. This is the single write point that
-  // feeds the "Streams today" stat on the profile page.
+  // feeds the "Streams today" stat on the profile page and, via
+  // recordListen, the home page's "Recommended for you" personalization.
   useEffect(() => {
     if (!song?.id) return;
     recordDailyStream(getCurrentUser()?.id);
+    recordListen(song.id);
   }, [song?.id]);
 
   useEffect(() => {

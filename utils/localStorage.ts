@@ -64,6 +64,19 @@ export const getDailyStreams = (userId: string): number => {
   return stats[userId]?.[todayKey()] || 0;
 };
 
+// --- Listening history (feeds utils/recommendation.ts) ---
+// Flat, global (not per-user) list of recently played song ids, matching the
+// existing seed shape. Capped so it stays bounded across a long session.
+
+const LISTENING_HISTORY_LIMIT = 50;
+
+export const recordListen = (songId: string): void => {
+  const history: string[] = getItem('listeningHistory') || [];
+  if (history[history.length - 1] === songId) return;
+  const updated = [...history, songId].slice(-LISTENING_HISTORY_LIMIT);
+  setItem('listeningHistory', updated);
+};
+
 // --- Initialization ---
 
 export const initializeMockDatabase = (): void => {

@@ -69,7 +69,10 @@ for the active language. Components read copy via `const { t } = useLanguage()` 
 than inlining English. `utils/i18n.ts` holds the `Language` union (`'en' | 'fa' | 'es'`), `LANGUAGES` (the
 option list for the settings selector), `RTL_LANGUAGES`/`isRtl`, and the `translations` dictionaries — add
 new copy as keys there, always with an `en` entry (`translate()` falls back to `en`, then to the raw key, so
-a missing translation degrades gracefully instead of crashing). Language and `dir` (RTL for `fa`) are driven
+a missing translation degrades gracefully instead of crashing). Both `translate(lang, key, params?)` and `t(key,
+params?)` accept an optional `params: Record<string, string | number>` that interpolates `{name}`-style
+placeholders in the resolved string (a missing param leaves the placeholder in place rather than throwing) —
+use this instead of string-concatenating translated copy, e.g. `t('home.reasonGenre', { genre })`. Language and `dir` (RTL for `fa`) are driven
 off `userPrefs.language` in `localStorage` and synced across tabs via the `storage` event — the same
 mechanism used by Player/GroupSession, not a new one. `LanguageProvider` also sets
 `document.documentElement.lang`/`dir` on every change, so the whole document flips to RTL for Persian, and it
@@ -176,6 +179,21 @@ don't re-derive follower/following mutations inline in either component.
 
 **Home page** (`app/home/page.tsx`) renders `LatestAlbumsRow` (the "latest published albums" showcase from the spec) above `TopSongsRow`; it loads the `albums` collection, sorts by `releaseYear` descending, and slices to 8 cards. `LatestAlbumsRow` reuses the album-card + artist-link pattern from `AlbumsBrowse.tsx` — card click → `/album/[id]`, artist-name button (with `stopPropagation`) → `/artist/[id]`. The empty state uses `EmptyState` with a `💿` icon (no CTA, since listeners don't publish albums).
 
+**"Recommended for you"** (`components/RecommendationEngine.tsx`, mounted last on `app/home/page.tsx`) renders
+the home recommendation row from `utils/recommendation.ts`'s `getRecommendations(allSongs, playedIds)`, which
+returns `Recommendation[]` (`{ song, reasonKey, reasonParams? }`) instead of a baked-English reason string. The
+card UI reuses the rest of the home row conventions: a hover play button following `TopSongsRow.tsx`'s
+overlay pattern (writes `currentTrack`/`queue` — the remaining recommendations become the queue — then
+dispatches the `storage` event), an artist-name button using `LatestAlbumsRow.tsx`'s `stopPropagation` →
+`/artist/[id]` pattern, and a mounted `AddToPlaylistMenu`. Personalization is real, not static: the Player's
+existing per-track effect (`Player.tsx`, keyed on `song?.id`, already calling `recordDailyStream`) also calls
+the new `recordListen(songId)` in `utils/localStorage.ts`, which appends to the flat, global `listeningHistory`
+key that `getRecommendations` consumes (capped to the last ~50 entries; Phase-2 note: this is global, not
+per-user, matching the original static seed's scope) — so the recommended genre/set shifts as the user
+actually plays songs, satisfying the spec's "meaningful, not random" requirement. Reason text is localized via
+`t(key, params)`, not hardcoded English: `home.reasonGenre`/`home.reasonTrending` keys live under `home.*` in
+`utils/i18n.ts`.
+
 **Player is global, not page-scoped:** `<Player>` and `<ServiceWorkerRegister>` are mounted once in
 `app/layout.tsx` (outside any route), so the player bar persists across navigation. It reads/writes
 `currentTrack` and `queue` in localStorage and re-syncs on the browser `storage` event — this is also the
@@ -265,7 +283,10 @@ state opens/closes on toggle, nav-item click, etc. `components/Player.test.tsx`'
 describe block mocks `window.matchMedia` to force the `useIsMobile()` hook's mobile branch (real happy-dom
 viewport width is 1024px, so it defaults to desktop) and asserts the mini-bar/full-screen behavior — since
 happy-dom can't compute actual CSS layout, this is the ceiling for automated responsive coverage; the
-375/768/1280px manual QA checklist is the real visual gate.
+375/768/1280px manual QA checklist is the real visual gate. `utils/recommendation.ts`'s `Recommendation` shape
+is `{ song, reasonKey, reasonParams? }`, not a baked English `reason` string — `RecommendationEngine.test.tsx`
+and `RecommendationEngine.render.test.tsx` assert against `reasonKey`/`reasonParams` (and the translated
+render output), so future tests here should do the same rather than string-matching English reason text.
 
 ## Project requirements (from `doc.tex`)
 

@@ -23,6 +23,16 @@ describe('i18n', () => {
       expect(translate('en', '__totally_missing__')).toBe('__totally_missing__');
       expect(translate('fa', '__totally_missing__')).toBe('__totally_missing__');
     });
+
+    it('interpolates {param} placeholders when params are given', () => {
+      expect(translate('en', 'home.reasonGenre', { genre: 'Rock' })).toBe(
+        'Because you listened to Rock'
+      );
+    });
+
+    it('leaves a placeholder in place when its param is missing', () => {
+      expect(translate('en', 'home.reasonGenre', {})).toBe('Because you listened to {genre}');
+    });
   });
 
   describe('isRtl', () => {

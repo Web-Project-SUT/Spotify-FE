@@ -3,7 +3,8 @@ import { Song } from './types';
 
 export interface Recommendation {
   song: Song;
-  reason: string;
+  reasonKey: string;
+  reasonParams?: Record<string, string>;
 }
 
 export function getRecommendations(allSongs: Song[], playedIds: string[]): Recommendation[] {
@@ -14,7 +15,7 @@ export function getRecommendations(allSongs: Song[], playedIds: string[]): Recom
     return [...allSongs]
       .sort((a, b) => (b.plays || 0) - (a.plays || 0))
       .slice(0, 5)
-      .map((song) => ({ song, reason: 'Trending with other listeners' }));
+      .map((song) => ({ song, reasonKey: 'home.reasonTrending' }));
   }
 
   const playedSongs = allSongs.filter((s) => playedIds.includes(s.id));
@@ -33,11 +34,11 @@ export function getRecommendations(allSongs: Song[], playedIds: string[]): Recom
       .filter((s) => !playedIds.includes(s.id))
       .sort((a, b) => (b.plays || 0) - (a.plays || 0))
       .slice(0, 5)
-      .map((song) => ({ song, reason: 'Trending with other listeners' }));
+      .map((song) => ({ song, reasonKey: 'home.reasonTrending' }));
   }
 
   return allSongs
     .filter((s) => s.genre === topGenre && !playedIds.includes(s.id))
     .slice(0, 5)
-    .map((song) => ({ song, reason: `Because you listened to ${topGenre}` }));
+    .map((song) => ({ song, reasonKey: 'home.reasonGenre', reasonParams: { genre: topGenre } }));
 }
