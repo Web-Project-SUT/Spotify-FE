@@ -16,7 +16,8 @@ describe('getRecommendations', () => {
 
     expect(recs.length).toBe(1);
     expect(recs[0].song.title).toBe('Other Rock');
-    expect(recs[0].reason).toMatch(/Rock/);
+    expect(recs[0].reasonKey).toBe('home.reasonGenre');
+    expect(recs[0].reasonParams?.genre).toBe('Rock');
   });
 
   it('falls back to top-played songs when there is no listening history', () => {
@@ -28,7 +29,7 @@ describe('getRecommendations', () => {
     const recs = getRecommendations(songs, []);
 
     expect(recs[0].song.title).toBe('High plays');
-    expect(recs[0].reason).toMatch(/Trending/);
+    expect(recs[0].reasonKey).toBe('home.reasonTrending');
   });
 
   it('does not mutate the original songs array', () => {
@@ -52,6 +53,6 @@ describe('getRecommendations', () => {
     const recs = getRecommendations(songs, ['1']);
 
     expect(recs[0].song.title).toBe('High plays');
-    expect(recs[0].reason).toMatch(/Trending/);
+    expect(recs[0].reasonKey).toBe('home.reasonTrending');
   });
 });

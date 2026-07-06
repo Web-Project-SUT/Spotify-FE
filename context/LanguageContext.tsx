@@ -7,7 +7,7 @@ import { Language, isRtl, translate } from '../utils/i18n';
 interface LanguageContextValue {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
   dir: 'ltr' | 'rtl';
 }
 
@@ -52,7 +52,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLanguageState(lang);
   }, []);
 
-  const t = useCallback((key: string) => translate(language, key), [language]);
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>) => translate(language, key, params),
+    [language]
+  );
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, dir }}>

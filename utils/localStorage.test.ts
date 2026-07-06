@@ -6,6 +6,7 @@ import {
   initializeMockDatabase,
   recordDailyStream,
   getDailyStreams,
+  recordListen,
 } from './localStorage';
 import { Playlist } from './types';
 
@@ -96,6 +97,25 @@ describe('Local Storage Data Layer', () => {
       recordDailyStream(undefined);
       recordDailyStream(null);
       expect(getItem('listeningStats')).toBeNull();
+    });
+  });
+
+  describe('recordListen', () => {
+    it('appends a song id to listeningHistory', () => {
+      setItem('listeningHistory', ['song1']);
+      recordListen('song2');
+      expect(getItem('listeningHistory')).toEqual(['song1', 'song2']);
+    });
+
+    it('does not append a consecutive duplicate', () => {
+      setItem('listeningHistory', ['song1']);
+      recordListen('song1');
+      expect(getItem('listeningHistory')).toEqual(['song1']);
+    });
+
+    it('starts a fresh history when none exists yet', () => {
+      recordListen('song1');
+      expect(getItem('listeningHistory')).toEqual(['song1']);
     });
   });
 });
