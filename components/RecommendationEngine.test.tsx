@@ -55,4 +55,19 @@ describe('getRecommendations', () => {
     expect(recs[0].song.title).toBe('High plays');
     expect(recs[0].reasonKey).toBe('home.reasonTrending');
   });
+
+  it('falls back to trending songs when every song in the top genre has already been played', () => {
+    const songs: Song[] = [
+      { id: '1', title: 'Rock A', genre: 'Rock', artistId: '1', cover: '', plays: 10 },
+      { id: '2', title: 'Pop A', genre: 'Pop', artistId: '1', cover: '', plays: 50 },
+    ] as Song[];
+
+    // '1' is the only Rock song and it's already played, so there are no
+    // unplayed Rock candidates left even though Rock is the top genre.
+    const recs = getRecommendations(songs, ['1']);
+
+    expect(recs.length).toBe(1);
+    expect(recs[0].song.title).toBe('Pop A');
+    expect(recs[0].reasonKey).toBe('home.reasonTrending');
+  });
 });
