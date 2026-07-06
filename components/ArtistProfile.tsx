@@ -48,7 +48,7 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
 
   if (!artist) {
     return (
-      <div className="p-10 flex items-center justify-center">
+      <div className="p-4 sm:p-6 md:p-10 flex items-center justify-center">
         <Spinner size={32} label="Loading artist profile…" />
       </div>
     );
@@ -62,8 +62,8 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white pb-10">
-      <div className="bg-gradient-to-b from-indigo-900 to-gray-900 p-10 flex items-end gap-6 h-72">
-        <div className="w-40 h-40 bg-indigo-500 rounded-full flex items-center justify-center text-7xl shadow-2xl border-4 border-gray-900">
+      <div className="bg-gradient-to-b from-indigo-900 to-gray-900 p-4 sm:p-6 lg:p-10 flex flex-col sm:flex-row items-start sm:items-end gap-6 h-auto sm:h-72">
+        <div className="w-24 h-24 sm:w-40 sm:h-40 bg-indigo-500 rounded-full flex items-center justify-center text-5xl sm:text-7xl shadow-2xl border-4 border-gray-900 flex-shrink-0">
           {artist.cover || '👤'}
         </div>
         <div>
@@ -73,14 +73,14 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
               <span className="text-sm uppercase font-bold tracking-widest text-gray-300">Verified artist</span>
             </div>
           )}
-          <h1 className="text-6xl font-extrabold my-2 tracking-tight">{artist.stageName || 'Unknown'}</h1>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold my-2 tracking-tight">{artist.stageName || 'Unknown'}</h1>
           <p className="text-gray-300 font-medium text-lg mt-4">
             {artist.followers ? artist.followers.toLocaleString() : '0'} monthly listeners
           </p>
         </div>
       </div>
 
-      <div className="px-10 mt-6 flex items-center gap-4">
+      <div className="px-4 sm:px-6 lg:px-10 mt-6 flex items-center gap-4">
         <button
           onClick={handleFollowToggle}
           className={`px-8 py-2 rounded-full font-bold text-sm tracking-wide transition-all ${isFollowing ? 'border border-gray-500 text-white hover:border-white' : 'bg-white text-black hover:scale-105'}`}
@@ -89,7 +89,7 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
         </button>
       </div>
 
-      <div className="px-10 mt-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="px-4 sm:px-6 lg:px-10 mt-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-12">
           <section>
             <h2 className="text-2xl font-bold mb-6">Popular singles</h2>

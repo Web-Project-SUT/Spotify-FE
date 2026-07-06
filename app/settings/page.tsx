@@ -42,7 +42,7 @@ function SettingsContent() {
   const tier = user?.tier || 'basic';
 
   return (
-    <div className="p-8 max-w-2xl space-y-8">
+    <div className="p-4 md:p-8 max-w-2xl space-y-8">
       <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
 
       <section className="bg-surface-2 p-6 rounded-lg space-y-4">

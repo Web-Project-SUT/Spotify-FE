@@ -195,3 +195,70 @@ describe('Player', () => {
     expect(screen.queryByText(/Streams:/i)).toBeNull();
   });
 });
+
+describe('Player mobile mode', () => {
+  const originalMatchMedia = window.matchMedia;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Force the useIsMobile() hook's '(max-width: 767px)' query to match,
+    // switching Player from the desktop bar to the mini-bar/full-screen UI.
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('renders the mini-bar instead of the desktop bar on a mobile viewport', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Mobile Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      return null;
+    });
+    render(<Player />);
+
+    expect(screen.getByText('Mobile Song')).toBeDefined();
+    expect(screen.getByLabelText('Expand player')).toBeDefined();
+    expect(screen.queryByText('Lyrics')).toBeNull();
+  });
+
+  it('expands to the full-screen player when the mini-bar is tapped, and collapses on close', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Mobile Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      return null;
+    });
+    render(<Player />);
+
+    fireEvent.click(screen.getByLabelText('Expand player'));
+
+    expect(screen.getByLabelText('Collapse player')).toBeDefined();
+    expect(screen.getByLabelText('Volume')).toBeDefined();
+
+    fireEvent.click(screen.getByLabelText('Collapse player'));
+
+    expect(screen.getByLabelText('Expand player')).toBeDefined();
+    expect(screen.queryByLabelText('Collapse player')).toBeNull();
+  });
+
+  it('toggling play from the mini-bar does not trigger expansion', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Mobile Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      return null;
+    });
+    render(<Player />);
+
+    fireEvent.click(screen.getByLabelText('Play'));
+
+    expect(screen.queryByLabelText('Collapse player')).toBeNull();
+    expect(screen.getByLabelText('Pause')).toBeDefined();
+  });
+});

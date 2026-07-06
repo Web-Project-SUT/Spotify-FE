@@ -57,7 +57,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
   if (notFound) {
     return (
-      <div className="p-10">
+      <div className="p-4 sm:p-6 md:p-10">
         <EmptyState icon="🙈" title="User not found" description={`No user exists with id "${userId}".`} />
       </div>
     );
@@ -65,7 +65,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
   if (!profileUser) {
     return (
-      <div className="p-10 flex items-center justify-center">
+      <div className="p-4 sm:p-6 md:p-10 flex items-center justify-center">
         <Spinner size={32} label="Loading profile…" />
       </div>
     );
@@ -118,7 +118,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   };
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-4 sm:p-6 md:p-10 max-w-2xl">
       <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-8">
         <Avatar src={profileUser.cover} name={profileUser.displayName || profileUser.email} size={96} />
         <div>
@@ -136,18 +136,18 @@ export default function UserProfile({ userId }: UserProfileProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-surface-2 p-4 rounded-lg text-center">
-          <p className="text-2xl font-bold">{(profileUser.followers || 0).toLocaleString()}</p>
-          <p className="text-muted text-sm">Followers</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
+        <div className="bg-surface-2 p-2 sm:p-4 rounded-lg text-center">
+          <p className="text-lg sm:text-2xl font-bold">{(profileUser.followers || 0).toLocaleString()}</p>
+          <p className="text-muted text-xs sm:text-sm">Followers</p>
         </div>
-        <div className="bg-surface-2 p-4 rounded-lg text-center">
-          <p className="text-2xl font-bold">{profileUser.following?.length || 0}</p>
-          <p className="text-muted text-sm">Following</p>
+        <div className="bg-surface-2 p-2 sm:p-4 rounded-lg text-center">
+          <p className="text-lg sm:text-2xl font-bold">{profileUser.following?.length || 0}</p>
+          <p className="text-muted text-xs sm:text-sm">Following</p>
         </div>
-        <div className="bg-surface-2 p-4 rounded-lg text-center">
-          <p className="text-2xl font-bold">{dailyStreams.toLocaleString()}</p>
-          <p className="text-muted text-sm">Streams today</p>
+        <div className="bg-surface-2 p-2 sm:p-4 rounded-lg text-center">
+          <p className="text-lg sm:text-2xl font-bold">{dailyStreams.toLocaleString()}</p>
+          <p className="text-muted text-xs sm:text-sm">Streams today</p>
         </div>
       </div>
 

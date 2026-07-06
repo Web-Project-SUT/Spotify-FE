@@ -81,7 +81,7 @@ export default function HelpCenter() {
   const statusLabel = (status: Ticket['status']) => t(`help.status.${status}`);
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold mb-6">{t('help.title')}</h1>
 
       {openTicket ? (
@@ -150,32 +150,34 @@ export default function HelpCenter() {
           {tickets.length === 0 ? (
             <EmptyState icon="🎧" title={t('help.emptyTitle')} description={t('help.emptyDesc')} />
           ) : (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-border text-muted text-sm">
-                  <th className="p-2">{t('help.columnId')}</th>
-                  <th className="p-2">{t('help.columnSubject')}</th>
-                  <th className="p-2">{t('help.columnDate')}</th>
-                  <th className="p-2">{t('help.columnStatus')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tickets.map((ticket) => (
-                  <tr
-                    key={ticket.id}
-                    className="border-b border-border hover:bg-surface-2 cursor-pointer"
-                    onClick={() => setOpenTicket(ticket)}
-                  >
-                    <td className="p-2">{ticket.id}</td>
-                    <td className="p-2">{ticket.subject}</td>
-                    <td className="p-2 text-muted">{ticket.date}</td>
-                    <td className="p-2">
-                      <Badge tone={badgeTone(ticket.status)}>{statusLabel(ticket.status)}</Badge>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] text-left">
+                <thead>
+                  <tr className="border-b border-border text-muted text-sm">
+                    <th className="p-2">{t('help.columnId')}</th>
+                    <th className="p-2">{t('help.columnSubject')}</th>
+                    <th className="p-2">{t('help.columnDate')}</th>
+                    <th className="p-2">{t('help.columnStatus')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tickets.map((ticket) => (
+                    <tr
+                      key={ticket.id}
+                      className="border-b border-border hover:bg-surface-2 cursor-pointer"
+                      onClick={() => setOpenTicket(ticket)}
+                    >
+                      <td className="p-2 whitespace-nowrap">{ticket.id}</td>
+                      <td className="p-2 whitespace-nowrap">{ticket.subject}</td>
+                      <td className="p-2 text-muted whitespace-nowrap">{ticket.date}</td>
+                      <td className="p-2 whitespace-nowrap">
+                        <Badge tone={badgeTone(ticket.status)}>{statusLabel(ticket.status)}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

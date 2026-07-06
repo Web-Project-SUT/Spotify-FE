@@ -9,7 +9,7 @@ export default function NotificationsPage() {
   const { t } = useLanguage();
   return (
     <AppShell>
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <h1 className="text-2xl font-bold mb-6">{t('notifications.title')}</h1>
         <NotificationPanel />
       </div>

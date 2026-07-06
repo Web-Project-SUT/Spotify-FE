@@ -73,7 +73,7 @@ export default function AlbumsBrowse() {
   const noResults = filteredAlbums.length === 0 && filteredSongs.length === 0;
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold mb-6">{t('browse.title')}</h1>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-8">

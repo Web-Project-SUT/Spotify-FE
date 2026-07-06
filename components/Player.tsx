@@ -6,6 +6,23 @@ import { isGoldUser, getCurrentUser } from '../utils/auth';
 
 type RepeatMode = 'off' | 'all' | 'one';
 
+// Below md (768px) the fixed bar becomes a tap-to-expand mini player per the
+// spec's mobile player requirement. Defaults to false so SSR/hydration and
+// the default test viewport (happy-dom's 1024px) render the desktop bar.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  return isMobile;
+}
+
 export default function Player() {
   const [song, setSong] = useState<Song | null>(null);
   const [isGold, setIsGold] = useState(false);
@@ -19,9 +36,12 @@ export default function Player() {
   const [showQueue, setShowQueue] = useState(false);
   const [queue, setQueue] = useState<Song[]>([]);
   const [accentColor, setAccentColor] = useState('#1db954');
+  const [expanded, setExpanded] = useState(false);
+  const [volume, setVolume] = useState(1);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setSong(getItem('currentTrack'));
@@ -45,6 +65,15 @@ export default function Player() {
     if (!song?.id) return;
     recordDailyStream(getCurrentUser()?.id);
   }, [song?.id]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  // Collapse the full-screen mobile player if the viewport grows back to desktop width.
+  useEffect(() => {
+    if (!isMobile) setExpanded(false);
+  }, [isMobile]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -147,95 +176,7 @@ export default function Player() {
   if (!song) return null;
 
   return (
-    <div
-      className="fixed bottom-0 w-full p-4 border-t border-gray-800 text-white z-50 transition-colors duration-500"
-      style={{ backgroundColor: accentColor }}
-    >
-      <div className="flex items-center justify-between max-w-6xl mx-auto gap-4">
-        <div className="flex items-center gap-4">
-          <img
-            ref={imgRef}
-            src={song.cover}
-            crossOrigin="anonymous"
-            onLoad={extractColor}
-            className="w-12 h-12"
-            alt="cover"
-          />
-          <div>
-            <p className="font-bold">{song.title}</p>
-            {isGold && (
-              <p className="text-xs text-yellow-200">
-                Streams: {(song.streamCount || 0).toLocaleString()} | Listeners: {(song.listenerCount || 0).toLocaleString()}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col items-center gap-1 px-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShuffle((s) => !s)}
-              aria-label="Shuffle"
-              aria-pressed={shuffle}
-              className={`text-sm ${shuffle ? 'text-black bg-white/90 rounded-full w-7 h-7' : 'text-white/80'}`}
-              title="Shuffle"
-            >
-              🔀
-            </button>
-            <button onClick={prev} aria-label="Previous" className="text-lg">⏮</button>
-            <button
-              onClick={togglePlay}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-              className="bg-white text-black rounded-full w-9 h-9 flex items-center justify-center text-lg"
-            >
-              {isPlaying ? '⏸' : '▶'}
-            </button>
-            <button onClick={next} aria-label="Next" className="text-lg" disabled={queue.length === 0}>⏭</button>
-            <button
-              onClick={cycleRepeat}
-              aria-label={`Repeat ${repeat}`}
-              className={`text-sm ${repeat !== 'off' ? 'text-black bg-white/90 rounded-full w-7 h-7' : 'text-white/80'}`}
-              title={`Repeat: ${repeat}`}
-            >
-              {repeat === 'one' ? '🔂' : '🔁'}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 w-full">
-            <span className="text-xs">
-              {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
-            </span>
-            <input
-              type="range"
-              min="0"
-              max={duration || 0}
-              value={currentTime}
-              onChange={(e) => audioRef.current && (audioRef.current.currentTime = Number(e.target.value))}
-              className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
-              aria-label="Seek"
-            />
-            <span className="text-xs">
-              {Math.floor((duration || 0) / 60)}:{Math.floor((duration || 0) % 60).toString().padStart(2, '0')}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex gap-4">
-          <button
-            onClick={() => setQuality(quality === 'high' ? 'low' : 'high')}
-            className="text-xs border px-2 py-1 rounded"
-            aria-label="Toggle audio quality"
-          >
-            {quality.toUpperCase()}
-          </button>
-          <button onClick={() => setShowQueue(!showQueue)} className="text-sm">
-            Queue {queue.length > 0 && `(${queue.length})`}
-          </button>
-          <button onClick={() => setShowLyrics(!showLyrics)} className="text-sm" disabled={!song.lyrics}>
-            Lyrics
-          </button>
-        </div>
-      </div>
-
+    <>
       <audio
         ref={audioRef}
         src={quality === 'high' ? song.audioUrlHigh : song.audioUrlLow}
@@ -246,35 +187,307 @@ export default function Player() {
         onPause={() => setIsPlaying(false)}
       />
 
-      {showQueue && (
-        <div className="absolute right-4 bottom-20 w-64 bg-black p-4 border border-gray-700 rounded-lg max-h-64 overflow-y-auto">
-          <p className="text-sm font-bold mb-2">Up next</p>
-          {queue.length === 0 ? (
-            <p className="text-xs text-gray-500 italic">Queue is empty.</p>
-          ) : (
-            <ul className="space-y-2">
-              {queue.map((q) => (
-                <li
-                  key={q.id}
-                  onClick={() => playFromQueue(q)}
-                  className="text-xs flex items-center gap-2 hover:bg-gray-800 p-1 rounded cursor-pointer"
+      {!isMobile && (
+        <div
+          className="fixed bottom-0 w-full p-4 border-t border-gray-800 text-white z-50 transition-colors duration-500"
+          style={{ backgroundColor: accentColor }}
+        >
+          <div className="flex items-center justify-between max-w-6xl mx-auto gap-4">
+            <div className="flex items-center gap-4">
+              <img
+                ref={imgRef}
+                src={song.cover}
+                crossOrigin="anonymous"
+                onLoad={extractColor}
+                className="w-12 h-12"
+                alt="cover"
+              />
+              <div>
+                <p className="font-bold">{song.title}</p>
+                {isGold && (
+                  <p className="text-xs text-yellow-200">
+                    Streams: {(song.streamCount || 0).toLocaleString()} | Listeners: {(song.listenerCount || 0).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col items-center gap-1 px-4">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setShuffle((s) => !s)}
+                  aria-label="Shuffle"
+                  aria-pressed={shuffle}
+                  className={`text-sm ${shuffle ? 'text-black bg-white/90 rounded-full w-7 h-7' : 'text-white/80'}`}
+                  title="Shuffle"
                 >
-                  <span>{q.cover || '🎵'}</span>
-                  <span className="truncate">{q.title}</span>
-                </li>
-              ))}
-            </ul>
+                  🔀
+                </button>
+                <button onClick={prev} aria-label="Previous" className="text-lg">⏮</button>
+                <button
+                  onClick={togglePlay}
+                  aria-label={isPlaying ? 'Pause' : 'Play'}
+                  className="bg-white text-black rounded-full w-9 h-9 flex items-center justify-center text-lg"
+                >
+                  {isPlaying ? '⏸' : '▶'}
+                </button>
+                <button onClick={next} aria-label="Next" className="text-lg" disabled={queue.length === 0}>⏭</button>
+                <button
+                  onClick={cycleRepeat}
+                  aria-label={`Repeat ${repeat}`}
+                  className={`text-sm ${repeat !== 'off' ? 'text-black bg-white/90 rounded-full w-7 h-7' : 'text-white/80'}`}
+                  title={`Repeat: ${repeat}`}
+                >
+                  {repeat === 'one' ? '🔂' : '🔁'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 w-full">
+                <span className="text-xs">
+                  {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max={duration || 0}
+                  value={currentTime}
+                  onChange={(e) => audioRef.current && (audioRef.current.currentTime = Number(e.target.value))}
+                  className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+                  aria-label="Seek"
+                />
+                <span className="text-xs">
+                  {Math.floor((duration || 0) / 60)}:{Math.floor((duration || 0) % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => setQuality(quality === 'high' ? 'low' : 'high')}
+                className="text-xs border px-2 py-1 rounded"
+                aria-label="Toggle audio quality"
+              >
+                {quality.toUpperCase()}
+              </button>
+              <button onClick={() => setShowQueue(!showQueue)} className="text-sm">
+                Queue {queue.length > 0 && `(${queue.length})`}
+              </button>
+              <button onClick={() => setShowLyrics(!showLyrics)} className="text-sm" disabled={!song.lyrics}>
+                Lyrics
+              </button>
+            </div>
+          </div>
+
+          {showQueue && (
+            <div className="absolute right-4 bottom-20 w-64 bg-black p-4 border border-gray-700 rounded-lg max-h-64 overflow-y-auto">
+              <p className="text-sm font-bold mb-2">Up next</p>
+              {queue.length === 0 ? (
+                <p className="text-xs text-gray-500 italic">Queue is empty.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {queue.map((q) => (
+                    <li
+                      key={q.id}
+                      onClick={() => playFromQueue(q)}
+                      className="text-xs flex items-center gap-2 hover:bg-gray-800 p-1 rounded cursor-pointer"
+                    >
+                      <span>{q.cover || '🎵'}</span>
+                      <span className="truncate">{q.title}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          {showLyrics && (
+            <div className="absolute right-20 bottom-20 w-64 bg-black p-4 border border-gray-700 rounded-lg max-h-64 overflow-y-auto">
+              <p className="text-sm font-bold mb-2">Lyrics</p>
+              <p className="text-xs text-gray-300 whitespace-pre-line">
+                {song.lyrics || 'No lyrics available for this track.'}
+              </p>
+            </div>
           )}
         </div>
       )}
-      {showLyrics && (
-        <div className="absolute right-20 bottom-20 w-64 bg-black p-4 border border-gray-700 rounded-lg max-h-64 overflow-y-auto">
-          <p className="text-sm font-bold mb-2">Lyrics</p>
-          <p className="text-xs text-gray-300 whitespace-pre-line">
-            {song.lyrics || 'No lyrics available for this track.'}
-          </p>
+
+      {isMobile && !expanded && (
+        <div
+          onClick={() => setExpanded(true)}
+          role="button"
+          tabIndex={0}
+          aria-label="Expand player"
+          className="fixed bottom-0 inset-x-0 z-50 text-white transition-colors duration-500"
+          style={{ backgroundColor: accentColor }}
+        >
+          <div className="h-1 bg-white/20" aria-hidden="true">
+            <div
+              className="h-1 bg-white"
+              style={{ width: duration ? `${Math.min(100, (currentTime / duration) * 100)}%` : '0%' }}
+            />
+          </div>
+          <div className="flex items-center gap-3 p-3">
+            <img src={song.cover} className="w-10 h-10 rounded flex-shrink-0" alt="cover" />
+            <p className="flex-1 min-w-0 truncate font-bold text-sm">{song.title}</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                togglePlay();
+              }}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+              className="bg-white text-black rounded-full w-9 h-9 flex items-center justify-center text-lg flex-shrink-0"
+            >
+              {isPlaying ? '⏸' : '▶'}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                next();
+              }}
+              aria-label="Next"
+              disabled={queue.length === 0}
+              className="text-lg flex-shrink-0"
+            >
+              ⏭
+            </button>
+          </div>
         </div>
       )}
-    </div>
+
+      {isMobile && expanded && (
+        <div
+          className="fixed inset-0 z-[60] text-white flex flex-col overflow-y-auto transition-colors duration-500"
+          style={{ backgroundColor: accentColor }}
+        >
+          <div className="flex justify-end p-4">
+            <button onClick={() => setExpanded(false)} aria-label="Collapse player" className="text-2xl">
+              ⌄
+            </button>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center px-6 pb-8 gap-6 max-w-md mx-auto w-full">
+            <img
+              ref={imgRef}
+              src={song.cover}
+              crossOrigin="anonymous"
+              onLoad={extractColor}
+              className="w-56 h-56 max-w-full rounded-lg shadow-lg"
+              alt="cover"
+            />
+            <div className="text-center">
+              <p className="font-bold text-xl">{song.title}</p>
+              {isGold && (
+                <p className="text-xs text-yellow-200 mt-1">
+                  Streams: {(song.streamCount || 0).toLocaleString()} | Listeners: {(song.listenerCount || 0).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            <div className="w-full flex items-center gap-2">
+              <span className="text-xs">
+                {Math.floor(currentTime / 60)}:{Math.floor(currentTime % 60).toString().padStart(2, '0')}
+              </span>
+              <input
+                type="range"
+                min="0"
+                max={duration || 0}
+                value={currentTime}
+                onChange={(e) => audioRef.current && (audioRef.current.currentTime = Number(e.target.value))}
+                className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+                aria-label="Seek"
+              />
+              <span className="text-xs">
+                {Math.floor((duration || 0) / 60)}:{Math.floor((duration || 0) % 60).toString().padStart(2, '0')}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <button
+                onClick={() => setShuffle((s) => !s)}
+                aria-label="Shuffle"
+                aria-pressed={shuffle}
+                className={`text-lg ${shuffle ? 'text-black bg-white/90 rounded-full w-9 h-9' : 'text-white/80'}`}
+              >
+                🔀
+              </button>
+              <button onClick={prev} aria-label="Previous" className="text-2xl">⏮</button>
+              <button
+                onClick={togglePlay}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                className="bg-white text-black rounded-full w-14 h-14 flex items-center justify-center text-2xl"
+              >
+                {isPlaying ? '⏸' : '▶'}
+              </button>
+              <button onClick={next} aria-label="Next" disabled={queue.length === 0} className="text-2xl">⏭</button>
+              <button
+                onClick={cycleRepeat}
+                aria-label={`Repeat ${repeat}`}
+                className={`text-lg ${repeat !== 'off' ? 'text-black bg-white/90 rounded-full w-9 h-9' : 'text-white/80'}`}
+              >
+                {repeat === 'one' ? '🔂' : '🔁'}
+              </button>
+            </div>
+
+            <div className="w-full flex items-center gap-2">
+              <span aria-hidden="true">🔊</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+                aria-label="Volume"
+              />
+            </div>
+
+            <div className="flex gap-6">
+              <button
+                onClick={() => setQuality(quality === 'high' ? 'low' : 'high')}
+                className="text-xs border px-2 py-1 rounded"
+                aria-label="Toggle audio quality"
+              >
+                {quality.toUpperCase()}
+              </button>
+              <button onClick={() => setShowQueue(!showQueue)} className="text-sm">
+                Queue {queue.length > 0 && `(${queue.length})`}
+              </button>
+              <button onClick={() => setShowLyrics(!showLyrics)} className="text-sm" disabled={!song.lyrics}>
+                Lyrics
+              </button>
+            </div>
+
+            {showQueue && (
+              <div className="w-full bg-black/40 p-4 border border-gray-700 rounded-lg max-h-64 overflow-y-auto">
+                <p className="text-sm font-bold mb-2">Up next</p>
+                {queue.length === 0 ? (
+                  <p className="text-xs text-gray-300 italic">Queue is empty.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {queue.map((q) => (
+                      <li
+                        key={q.id}
+                        onClick={() => playFromQueue(q)}
+                        className="text-xs flex items-center gap-2 hover:bg-black/30 p-1 rounded cursor-pointer"
+                      >
+                        <span>{q.cover || '🎵'}</span>
+                        <span className="truncate">{q.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+            {showLyrics && (
+              <div className="w-full bg-black/40 p-4 border border-gray-700 rounded-lg max-h-64 overflow-y-auto">
+                <p className="text-sm font-bold mb-2">Lyrics</p>
+                <p className="text-xs text-gray-100 whitespace-pre-line">
+                  {song.lyrics || 'No lyrics available for this track.'}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

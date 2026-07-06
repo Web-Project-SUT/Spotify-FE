@@ -77,7 +77,7 @@ export default function SupportDashboard() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <h1 className="text-2xl font-bold mb-6">Support</h1>
 
       <div className="flex gap-2 mb-6 border-b border-border">
@@ -99,37 +99,39 @@ export default function SupportDashboard() {
         pendingArtists.length === 0 ? (
           <EmptyState icon="✅" title="No pending applications" description="All artist applications have been reviewed." />
         ) : (
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-border text-muted text-sm">
-                <th className="p-2">Stage name</th>
-                <th className="p-2">Email</th>
-                <th className="p-2">Portfolio</th>
-                <th className="p-2">Decision</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pendingArtists.map((a) => (
-                <tr key={a.id} className="border-b border-border">
-                  <td className="p-2 font-bold">{a.stageName}</td>
-                  <td className="p-2 text-muted">{a.email}</td>
-                  <td className="p-2">
-                    {a.portfolio ? (
-                      <a href={a.portfolio} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                        View samples
-                      </a>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
-                  </td>
-                  <td className="p-2 flex gap-2">
-                    <Button size="sm" onClick={() => decideArtist(a, true)}>Approve</Button>
-                    <Button size="sm" variant="danger" onClick={() => setRejectTarget(a)}>Reject</Button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left">
+              <thead>
+                <tr className="border-b border-border text-muted text-sm">
+                  <th className="p-2">Stage name</th>
+                  <th className="p-2">Email</th>
+                  <th className="p-2">Portfolio</th>
+                  <th className="p-2">Decision</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pendingArtists.map((a) => (
+                  <tr key={a.id} className="border-b border-border">
+                    <td className="p-2 font-bold whitespace-nowrap">{a.stageName}</td>
+                    <td className="p-2 text-muted whitespace-nowrap">{a.email}</td>
+                    <td className="p-2 whitespace-nowrap">
+                      {a.portfolio ? (
+                        <a href={a.portfolio} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                          View samples
+                        </a>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+                    <td className="p-2 flex gap-2 whitespace-nowrap">
+                      <Button size="sm" onClick={() => decideArtist(a, true)}>Approve</Button>
+                      <Button size="sm" variant="danger" onClick={() => setRejectTarget(a)}>Reject</Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )
       ) : openTicket ? (
         <div className="max-w-xl">
@@ -170,30 +172,32 @@ export default function SupportDashboard() {
           </div>
         </div>
       ) : (
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-border text-muted text-sm">
-              <th className="p-2">ID</th>
-              <th className="p-2">User</th>
-              <th className="p-2">Subject</th>
-              <th className="p-2">Date</th>
-              <th className="p-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tickets.map((ticket) => (
-              <tr key={ticket.id} className="border-b border-border hover:bg-surface-2 cursor-pointer" onClick={() => setOpenTicket(ticket)}>
-                <td className="p-2">{ticket.id}</td>
-                <td className="p-2 text-muted">{ticket.userName}</td>
-                <td className="p-2">{ticket.subject}</td>
-                <td className="p-2 text-muted">{ticket.date}</td>
-                <td className="p-2">
-                  <Badge tone={ticket.status === 'open' ? 'info' : ticket.status === 'answered' ? 'success' : 'neutral'}>{ticket.status}</Badge>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-left">
+            <thead>
+              <tr className="border-b border-border text-muted text-sm">
+                <th className="p-2">ID</th>
+                <th className="p-2">User</th>
+                <th className="p-2">Subject</th>
+                <th className="p-2">Date</th>
+                <th className="p-2">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tickets.map((ticket) => (
+                <tr key={ticket.id} className="border-b border-border hover:bg-surface-2 cursor-pointer" onClick={() => setOpenTicket(ticket)}>
+                  <td className="p-2 whitespace-nowrap">{ticket.id}</td>
+                  <td className="p-2 text-muted whitespace-nowrap">{ticket.userName}</td>
+                  <td className="p-2 whitespace-nowrap">{ticket.subject}</td>
+                  <td className="p-2 text-muted whitespace-nowrap">{ticket.date}</td>
+                  <td className="p-2 whitespace-nowrap">
+                    <Badge tone={ticket.status === 'open' ? 'info' : ticket.status === 'answered' ? 'success' : 'neutral'}>{ticket.status}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {rejectTarget && (

@@ -39,14 +39,14 @@ function AlbumContent() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-end gap-6 mb-8">
-        <div className="w-44 h-44 bg-surface-3 rounded-lg flex items-center justify-center text-7xl">
+    <div className="p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 mb-8">
+        <div className="w-32 h-32 sm:w-44 sm:h-44 bg-surface-3 rounded-lg flex items-center justify-center text-5xl sm:text-7xl flex-shrink-0">
           {album.cover || '💿'}
         </div>
         <div>
           <p className="text-muted text-sm uppercase">Album</p>
-          <h1 className="text-4xl font-bold">{album.title}</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold">{album.title}</h1>
           <button onClick={() => router.push(`/artist/${album.artistId}`)} className="text-muted hover:underline mt-2">
             {artistName} · {album.releaseYear}
           </button>
