@@ -129,4 +129,46 @@ describe('NotificationPanel', () => {
       expect(screen.getByText(/No notifications yet/i)).toBeDefined();
     });
   });
+
+  it('marks every notification as read via "Read all", preserving other users\' entries', async () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentUser') return { id: 'u1', role: 'listener' };
+      if (key === 'notifications') {
+        return [
+          { id: '1', userId: 'u1', title: 'First', message: 'msg', type: 'release', isRead: false, createdAt: '' },
+          { id: '2', userId: 'u1', title: 'Second', message: 'msg', type: 'subscription', isRead: false, createdAt: '' },
+          { id: '3', userId: 'u2', title: 'Other', message: 'msg', type: 'release', isRead: false, createdAt: '' },
+        ];
+      }
+      return [];
+    });
+
+    renderPanel();
+
+    await waitFor(() => expect(screen.getByText('First')).toBeDefined());
+
+    fireEvent.click(screen.getByText('Mark all read'));
+
+    expect(localStorageUtils.setItem).toHaveBeenCalledWith(
+      'notifications',
+      expect.arrayContaining([
+        expect.objectContaining({ id: '3', userId: 'u2', isRead: false }),
+        expect.objectContaining({ id: '1', userId: 'u1', isRead: true }),
+        expect.objectContaining({ id: '2', userId: 'u1', isRead: true }),
+      ])
+    );
+  });
+
+  it('shows the support/admin empty state for a support user with no notifications', async () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentUser') return { id: 's1', role: 'support' };
+      return [];
+    });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByText(/new tickets and artist approval requests/i)).toBeDefined();
+    });
+  });
 });
