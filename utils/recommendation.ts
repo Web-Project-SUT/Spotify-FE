@@ -37,8 +37,19 @@ export function getRecommendations(allSongs: Song[], playedIds: string[]): Recom
       .map((song) => ({ song, reasonKey: 'home.reasonTrending' }));
   }
 
-  return allSongs
+  const genreMatches = allSongs
     .filter((s) => s.genre === topGenre && !playedIds.includes(s.id))
     .slice(0, 5)
     .map((song) => ({ song, reasonKey: 'home.reasonGenre', reasonParams: { genre: topGenre } }));
+
+  if (genreMatches.length > 0) return genreMatches;
+
+  // Every song in the listener's top genre has already been played: fall
+  // back to overall trending among unplayed songs instead of returning
+  // nothing, so the row still has something to show.
+  return [...allSongs]
+    .filter((s) => !playedIds.includes(s.id))
+    .sort((a, b) => (b.plays || 0) - (a.plays || 0))
+    .slice(0, 5)
+    .map((song) => ({ song, reasonKey: 'home.reasonTrending' }));
 }
