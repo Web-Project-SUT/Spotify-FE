@@ -67,7 +67,7 @@ export default function RevenueChart() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-gray-800 p-4 rounded-lg">
           <p className="text-xs text-gray-400">This month's revenue</p>
           <p className="text-2xl font-bold">${currentMonthRevenue.toLocaleString()}</p>
@@ -83,8 +83,8 @@ export default function RevenueChart() {
         {totalListeners === 0 ? (
           <p className="text-gray-500 italic">No listener data yet.</p>
         ) : (
-          <div className="flex items-center gap-8">
-            <svg width="140" height="140" viewBox="0 0 140 140">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
+            <svg width="140" height="140" viewBox="0 0 140 140" className="flex-shrink-0">
               <g transform="translate(70,70) rotate(-90)">
                 {slices.map((s) => {
                   if (s.value === 0) return null;

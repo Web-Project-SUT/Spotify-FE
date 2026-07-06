@@ -7,7 +7,7 @@ import PlaylistManager from '../../components/PlaylistManager';
 export default function PlaylistsPage() {
   return (
     <AppShell allow={['listener']}>
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <PlaylistManager />
       </div>
     </AppShell>

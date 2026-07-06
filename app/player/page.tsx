@@ -23,8 +23,8 @@ export default function PlayerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 pb-32">
-      <div className="w-64 h-64 bg-surface-3 rounded-lg flex items-center justify-center text-8xl mb-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8 pb-32">
+      <div className="w-48 h-48 sm:w-64 sm:h-64 bg-surface-3 rounded-lg flex items-center justify-center text-6xl sm:text-8xl mb-6">
         {song.cover && song.cover.length <= 2 ? song.cover : '🎵'}
       </div>
       <h1 className="text-2xl font-bold">{song.title}</h1>

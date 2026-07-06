@@ -10,7 +10,7 @@ import PriceControl from '../../components/PriceControl';
 function DashboardContent() {
   const { user } = useAuth();
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl font-bold">Admin dashboard</h1>
       <PriceControl />
       <AccountingTable currentRole={user?.role} />

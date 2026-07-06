@@ -142,6 +142,14 @@ users to their role home via `getRoleHome`, and on a valid submit shows a mocked
 `<Spinner>` primitive) before a success screen that just confirms an email was "sent" — no real email/network
 in Phase 1.
 
+**Mobile nav is a hamburger drawer**, not a second nav surface: `AppShell.tsx` owns a `md:hidden` top bar
+(`☰` toggle + wordmark) and a single `navOpen` boolean, passed to `Sidebar` as `open`/`onClose`. `Sidebar`
+itself renders unconditionally — it's a `md:sticky md:translate-x-0` static column at `md+` and, below `md`,
+a `fixed -translate-x-full` → `translate-x-0` overlay drawer with a dimmed backdrop, closing on backdrop
+click, nav-item click, or route change (a `pathname`-keyed effect calls `onClose`). This is the only mobile
+nav seam in the app — don't add a second collapsed-nav implementation elsewhere. `AppShell`'s `<main>` uses
+`pb-32 md:pb-28 pt-14 md:pt-0` so the mobile top bar and the (taller) mobile player never overlap content.
+
 **`/register`** hosts both listener and artist sign-up (tabbed). The listener form collects display name,
 email, password + confirm, DOB, gender, and privacy-policy acceptance (modal), validates per-field like
 `/login` (shared `EMAIL_RE` from `utils/auth.ts`, duplicate-email guard against the `users` collection), and
@@ -177,6 +185,18 @@ any page that starts playback (e.g. `AlbumsBrowse`, album/artist pages). The pla
 point for the daily-stream stat: a `useEffect` keyed on the current song's id calls
 `recordDailyStream(getCurrentUser()?.id)` once per new track (resuming the same track doesn't double-count),
 which feeds the profile page's "streams today" number.
+
+**Player has three presentation modes, one shared handler set:** a `useIsMobile()` hook (local to
+`Player.tsx`, `window.matchMedia('(max-width: 767px)')`, defaulting to `false` so SSR and the default test
+viewport render desktop) picks between the desktop fixed bar (`md+`, unchanged), a mobile mini-bar (compact
+cover + title + play/next, tap-to-expand), and a mobile full-screen overlay (`expanded` state — seek,
+transport, shuffle/repeat, volume, queue/lyrics, gold stats). Exactly one of the three renders at a time —
+this is deliberate, not just a CSS `hidden` toggle, because it keeps the DOM free of duplicate
+labels/text across modes (important for `*.test.tsx` queries like `getByLabelText('Play')`, which throw on
+multiple matches) and avoids interrupting playback: the `<audio>` element is hoisted above all three modes
+and always mounted once, regardless of which chrome is showing. All three modes call the same playback
+handlers/state (`togglePlay`, `next`, `prev`, `cycleRepeat`, `playFromQueue`, seek/volume) — the mode split
+is presentation-only, so Phase-2 playback logic changes stay in one place.
 
 **Home page** (`app/home/page.tsx`) renders `RecentPlaylistsRow` (the "last listened-to playlists" showcase
 from the spec) above `TopSongsRow`; it shows only playlists that have an actual `Playlist.lastPlayedAt`
@@ -219,6 +239,15 @@ palette is defined as CSS variables and bound to Tailwind classes via the v4 `@t
 CSS-first. Reference these tokens/classes and the UI primitives instead of hardcoding hex values or
 one-off styles, so a Phase 2 restyle stays centralized.
 
+**Responsive conventions:** Tailwind v4's default breakpoints apply throughout (`sm`=640, `md`=768,
+`lg`=1024, `xl`=1280); the project's manual QA gate is 375px (below `sm`) / 768px (`md`) / 1280px (`xl`).
+Any `<table className="w-full">` must be wrapped in `<div className="overflow-x-auto">` (with
+`whitespace-nowrap` on cells as needed) — `AppShell`'s `<main>` is `overflow-x-hidden`, which silently
+clips unwrapped wide tables instead of letting them scroll; see `AccountingTable`, `ArtistStatsDashboard`,
+`SupportDashboard`, and `HelpCenter` for the pattern. Prefer responsive Tailwind utility prefixes
+(`sm:`/`md:`/`lg:`) over `globals.css` media queries, per the CSS-first setup — there is still no
+`tailwind.config.js`.
+
 **Testing convention:** test files sit next to the component they cover (`Component.test.tsx`), using Vitest +
 Testing Library + `happy-dom`. Follow this colocated naming when adding tests rather than a separate `__tests__`
 tree. There is **no jest-dom** — use native Vitest matchers only (`toBeDefined()`, `toBeNull()`,
@@ -230,7 +259,13 @@ argument, these tests pass `User`-shaped objects directly with no localStorage m
 `components/ProtectedRoute.test.tsx` covers the role-based access-control redirects and introduces this repo's
 first `next/navigation` + `AuthContext` mock pattern (`vi.mock('next/navigation', () => ({ useRouter: () => ({
 replace }) }))` alongside a mutable `authState` object returned from a mocked `useAuth`) — reuse this pattern
-for any future test that needs routing or auth context rather than re-deriving it.
+for any future test that needs routing or auth context rather than re-deriving it. `components/AppShell.test.tsx`
+reuses that same mock pattern (plus a mocked `useLanguage`) to assert the hamburger drawer's `aria-expanded`
+state opens/closes on toggle, nav-item click, etc. `components/Player.test.tsx`'s "Player mobile mode"
+describe block mocks `window.matchMedia` to force the `useIsMobile()` hook's mobile branch (real happy-dom
+viewport width is 1024px, so it defaults to desktop) and asserts the mini-bar/full-screen behavior — since
+happy-dom can't compute actual CSS layout, this is the ceiling for automated responsive coverage; the
+375/768/1280px manual QA checklist is the real visual gate.
 
 ## Project requirements (from `doc.tex`)
 

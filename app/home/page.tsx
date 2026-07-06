@@ -16,7 +16,7 @@ function HomeContent() {
   const { user } = useAuth();
   const { t } = useLanguage();
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8">
       <div className="flex items-center gap-3 mb-8">
         <Avatar src={user?.cover} name={user?.displayName || user?.stageName || user?.email} size={48} />
         <div>

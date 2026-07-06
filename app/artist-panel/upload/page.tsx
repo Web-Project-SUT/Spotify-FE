@@ -7,7 +7,7 @@ import UploadArtworkForm from '../../../components/UploadArtworkForm';
 export default function UploadArtworkPage() {
   return (
     <AppShell allow={['artist']}>
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <UploadArtworkForm />
       </div>
     </AppShell>
