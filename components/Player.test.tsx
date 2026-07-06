@@ -169,4 +169,29 @@ describe('Player', () => {
     fireEvent.click(screen.getByLabelText('Play'));
     expect(screen.getByLabelText('Pause')).toBeDefined();
   });
+
+  it('toggles shuffle active state', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      return null;
+    });
+    render(<Player />);
+
+    const shuffleButton = screen.getByLabelText('Shuffle');
+    expect(shuffleButton.getAttribute('aria-pressed')).toBe('false');
+    fireEvent.click(shuffleButton);
+    expect(shuffleButton.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('hides stream and listener count for a silver-tier listener', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') {
+        return { title: 'Song', streamCount: 500, listenerCount: 200, audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      }
+      if (key === 'currentUser') return { role: 'listener', tier: 'silver' };
+      return null;
+    });
+    render(<Player />);
+    expect(screen.queryByText(/Streams:/i)).toBeNull();
+  });
 });

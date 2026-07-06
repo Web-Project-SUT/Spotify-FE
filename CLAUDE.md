@@ -221,7 +221,16 @@ one-off styles, so a Phase 2 restyle stays centralized.
 
 **Testing convention:** test files sit next to the component they cover (`Component.test.tsx`), using Vitest +
 Testing Library + `happy-dom`. Follow this colocated naming when adding tests rather than a separate `__tests__`
-tree.
+tree. There is **no jest-dom** — use native Vitest matchers only (`toBeDefined()`, `toBeNull()`,
+`toHaveProperty(...)`, `toHaveBeenCalledWith(...)`), never `toBeInTheDocument()`. The data layer is driven by
+mocking `utils/localStorage.getItem`/`setItem` keyed by storage key, not by seeding real `localStorage`.
+`utils/auth.test.ts` is the dedicated unit test for the tier/role helpers (`getPlaylistLimit`, `getTier`,
+`isGoldUser`, `isSilverOrAbove`, `getRoleHome`, `PLAYLIST_LIMITS`) — since those helpers take an explicit `user`
+argument, these tests pass `User`-shaped objects directly with no localStorage mocking needed.
+`components/ProtectedRoute.test.tsx` covers the role-based access-control redirects and introduces this repo's
+first `next/navigation` + `AuthContext` mock pattern (`vi.mock('next/navigation', () => ({ useRouter: () => ({
+replace }) }))` alongside a mutable `authState` object returned from a mocked `useAuth`) — reuse this pattern
+for any future test that needs routing or auth context rather than re-deriving it.
 
 ## Project requirements (from `doc.tex`)
 
