@@ -70,4 +70,51 @@ describe('getRecommendations', () => {
     expect(recs[0].song.title).toBe('Pop A');
     expect(recs[0].reasonKey).toBe('home.reasonTrending');
   });
+
+  it('falls back to overall trending (including already-played songs) once the whole catalog has been played', () => {
+    const songs: Song[] = [
+      { id: '1', title: 'Rock A', genre: 'Rock', artistId: '1', cover: '', plays: 10 },
+      { id: '2', title: 'Rock B', genre: 'Rock', artistId: '1', cover: '', plays: 50 },
+    ] as Song[];
+
+    // Both songs share the top genre and both are already played, so there
+    // is nothing left to exclude — the row should still show something
+    // rather than going empty.
+    const recs = getRecommendations(songs, ['1', '2']);
+
+    expect(recs.length).toBe(2);
+    expect(recs[0].song.title).toBe('Rock B');
+    expect(recs[0].reasonKey).toBe('home.reasonTrending');
+  });
+
+  it('gives different accounts a different trending list when neither has any listening history', () => {
+    const songs: Song[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `${i + 1}`,
+      title: `Song ${i + 1}`,
+      artistId: '1',
+      cover: '',
+      plays: (10 - i) * 100,
+    })) as Song[];
+
+    const signatures = ['brand-new-1', 'brand-new-2', 'brand-new-3', 'brand-new-4'].map((userId) =>
+      JSON.stringify(getRecommendations(songs, [], userId).map((r) => r.song.id))
+    );
+
+    expect(new Set(signatures).size).toBeGreaterThan(1);
+  });
+
+  it('is deterministic for the same user id across repeat calls', () => {
+    const songs: Song[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `${i + 1}`,
+      title: `Song ${i + 1}`,
+      artistId: '1',
+      cover: '',
+      plays: (10 - i) * 100,
+    })) as Song[];
+
+    const first = getRecommendations(songs, [], 'u1').map((r) => r.song.id);
+    const second = getRecommendations(songs, [], 'u1').map((r) => r.song.id);
+
+    expect(second).toEqual(first);
+  });
 });

@@ -65,16 +65,25 @@ export const getDailyStreams = (userId: string): number => {
 };
 
 // --- Listening history (feeds utils/recommendation.ts) ---
-// Flat, global (not per-user) list of recently played song ids, matching the
-// existing seed shape. Capped so it stays bounded across a long session.
+// Keyed by userId (mirrors listeningStats above) so recommendations are
+// personalized per account instead of carrying over whoever was last
+// logged in on this device. Capped per-user so it stays bounded.
 
 const LISTENING_HISTORY_LIMIT = 50;
 
-export const recordListen = (songId: string): void => {
-  const history: string[] = getItem('listeningHistory') || [];
-  if (history[history.length - 1] === songId) return;
-  const updated = [...history, songId].slice(-LISTENING_HISTORY_LIMIT);
-  setItem('listeningHistory', updated);
+export const recordListen = (userId: string | undefined | null, songId: string): void => {
+  if (!userId) return;
+  const history = getItem('listeningHistory') || {};
+  const perUser: string[] = history[userId] || [];
+  if (perUser[perUser.length - 1] === songId) return;
+  history[userId] = [...perUser, songId].slice(-LISTENING_HISTORY_LIMIT);
+  setItem('listeningHistory', history);
+};
+
+export const getListeningHistory = (userId: string | undefined | null): string[] => {
+  if (!userId) return [];
+  const history = getItem('listeningHistory') || {};
+  return history[userId] || [];
 };
 
 // --- Initialization ---
@@ -148,9 +157,30 @@ export const initializeMockDatabase = (): void => {
     setItem('subscriptionPrices', { silver: 4.99, gold: 9.99 });
   }
 
-  if (!getItem('listeningHistory')) {
-    setItem('listeningHistory', ['song1', 'song2']);
-  }
+  // Seeded per-user so the three demo listener accounts show visibly
+  // different "Recommended for you" results out of the box. This fills in
+  // only the demo ids that are missing rather than an all-or-nothing
+  // reseed, so it self-heals two kinds of stale localStorage left by an
+  // older build of this feature: the original flat `string[]` shape (not
+  // an object at all), and an earlier per-user object that only had a `u1`
+  // entry — either of which would otherwise leave u2/u3 reading `[]` and
+  // showing the exact same trending fallback as each other.
+  const existingHistory = getItem('listeningHistory');
+  const listeningHistory: Record<string, string[]> =
+    existingHistory && !Array.isArray(existingHistory) ? existingHistory : {};
+  const defaultListeningHistory: Record<string, string[]> = {
+    u1: ['song1'],
+    u2: ['song3'],
+    u3: ['song2', 'song3', 'song4'],
+  };
+  let historyChanged = !existingHistory || Array.isArray(existingHistory);
+  Object.entries(defaultListeningHistory).forEach(([userId, songIds]) => {
+    if (!listeningHistory[userId]) {
+      listeningHistory[userId] = songIds;
+      historyChanged = true;
+    }
+  });
+  if (historyChanged) setItem('listeningHistory', listeningHistory);
 
   if (!getItem('tickets')) {
     setItem('tickets', [

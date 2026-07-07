@@ -180,19 +180,44 @@ don't re-derive follower/following mutations inline in either component.
 **Home page** (`app/home/page.tsx`) renders `LatestAlbumsRow` (the "latest published albums" showcase from the spec) above `TopSongsRow`; it loads the `albums` collection, sorts by `releaseYear` descending, and slices to 8 cards. `LatestAlbumsRow` reuses the album-card + artist-link pattern from `AlbumsBrowse.tsx` — card click → `/album/[id]`, artist-name button (with `stopPropagation`) → `/artist/[id]`. The empty state uses `EmptyState` with a `💿` icon (no CTA, since listeners don't publish albums).
 
 **"Recommended for you"** (`components/RecommendationEngine.tsx`, mounted last on `app/home/page.tsx`) renders
-the home recommendation row from `utils/recommendation.ts`'s `getRecommendations(allSongs, playedIds)`, which
-returns `Recommendation[]` (`{ song, reasonKey, reasonParams? }`) instead of a baked-English reason string. The
+the home recommendation row from `utils/recommendation.ts`'s `getRecommendations(allSongs, playedIds, userId?)`,
+which returns `Recommendation[]` (`{ song, reasonKey, reasonParams? }`) instead of a baked-English reason
+string. The
 card UI reuses the rest of the home row conventions: a hover play button following `TopSongsRow.tsx`'s
 overlay pattern (writes `currentTrack`/`queue` — the remaining recommendations become the queue — then
 dispatches the `storage` event), an artist-name button using `LatestAlbumsRow.tsx`'s `stopPropagation` →
 `/artist/[id]` pattern, and a mounted `AddToPlaylistMenu`. Personalization is real, not static: the Player's
 existing per-track effect (`Player.tsx`, keyed on `song?.id`, already calling `recordDailyStream`) also calls
-the new `recordListen(songId)` in `utils/localStorage.ts`, which appends to the flat, global `listeningHistory`
-key that `getRecommendations` consumes (capped to the last ~50 entries; Phase-2 note: this is global, not
-per-user, matching the original static seed's scope) — so the recommended genre/set shifts as the user
-actually plays songs, satisfying the spec's "meaningful, not random" requirement. Reason text is localized via
+`recordListen(userId, songId)` in `utils/localStorage.ts`, which appends to a `listeningHistory` collection
+keyed **per-user** (`{ [userId]: string[] }`, mirroring `listeningStats`, capped to the last ~50 entries per
+user) via `getListeningHistory(userId)` — so switching accounts on the same device gets that account's own
+recommendations rather than carrying over whoever was last logged in. The three seeded demo listeners (`u1`,
+`u2`, `u3`) each get a distinct starting history in `initializeMockDatabase()` so their "Recommended for you"
+rows visibly differ out of the box, rather than all falling back to the same no-history trending list.
+Because this key's shape changed from an earlier flat `string[]` to the per-user object, the seeding check
+reseeds (rather than only seeding when the key is absent) if it finds the legacy array shape still sitting in
+a browser's localStorage from before the change — otherwise every account would silently read `[]` from that
+stale array and see identical recommendations. `getRecommendations` also never returns
+an empty list while the song catalog is non-empty: if a listener's top genre has no unplayed songs left, it
+falls back to trending among unplayed songs, and if the *entire* catalog has been played, to trending overall
+(including already-played songs) — the row only disappears if there are literally no songs at all. After
+`recordListen` writes, `Player.tsx` dispatches the `storage` event (this repo's established same-tab sync
+trick, since the native event never fires in the tab that made the change — see the i18n paragraph above for
+the same pattern), and `RecommendationEngine` listens for it to recompute in place, so the row updates live as
+the user listens instead of requiring a page refresh. Reason text is localized via
 `t(key, params)`, not hardcoded English: `home.reasonGenre`/`home.reasonTrending` keys live under `home.*` in
 `utils/i18n.ts`.
+
+Because a brand-new signup (`registerListener` in `AuthContext.tsx`) starts with **zero** listening history —
+and any listener who's exhausted their top genre or their whole catalog also falls through to the same
+trending path — `getRecommendations` takes an optional third `userId` argument (passed by
+`RecommendationEngine.tsx` as `getCurrentUser()?.id`) that seeds a deterministic (not `Math.random()`)
+per-user shuffle + variable track count (3-6, capped to the candidate pool size) over whichever candidate
+pool it would otherwise slice identically for everyone. This is what actually makes "different accounts see
+different lists" hold for two accounts that have listened to nothing at all, not just for the three seeded
+demo users — omitting `userId` (as every pre-existing test still does) reproduces the exact old
+top-N-by-plays behavior, so this personalization only ever narrows/reorders/resizes a pool that was already
+going to be shown, never changes *which* fallback tier (genre vs. trending) applies.
 
 **Player is global, not page-scoped:** `<Player>` and `<ServiceWorkerRegister>` are mounted once in
 `app/layout.tsx` (outside any route), so the player bar persists across navigation. It reads/writes

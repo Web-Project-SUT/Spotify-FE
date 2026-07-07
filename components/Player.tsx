@@ -62,10 +62,15 @@ export default function Player() {
   // same track) don't double-count. This is the single write point that
   // feeds the "Streams today" stat on the profile page and, via
   // recordListen, the home page's "Recommended for you" personalization.
+  // Dispatching 'storage' afterward (the project's existing same-tab sync
+  // trick, since the native event never fires in the tab that wrote the
+  // change) lets RecommendationEngine recompute without needing a refresh.
   useEffect(() => {
     if (!song?.id) return;
-    recordDailyStream(getCurrentUser()?.id);
-    recordListen(song.id);
+    const userId = getCurrentUser()?.id;
+    recordDailyStream(userId);
+    recordListen(userId, song.id);
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('storage'));
   }, [song?.id]);
 
   useEffect(() => {
