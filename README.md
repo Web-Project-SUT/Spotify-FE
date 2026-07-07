@@ -61,4 +61,3 @@ npx tsc --noEmit    # typecheck without emitting output
 - Vitest + Testing Library for tests
 - `localStorage` as the mock data/persistence layer for Phase 1
 
-See `CLAUDE.md` for a deeper look at the architecture and project requirements.
