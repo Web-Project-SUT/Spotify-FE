@@ -7,6 +7,7 @@ import {
   recordDailyStream,
   getDailyStreams,
   recordListen,
+  getListeningHistory,
 } from './localStorage';
 import { Playlist } from './types';
 
@@ -73,6 +74,51 @@ describe('Local Storage Data Layer', () => {
     expect(users).toEqual([{ id: 'custom', email: 'x@y.z', role: 'listener' }]);
   });
 
+  it('seeds a distinct listening history per demo listener account', () => {
+    initializeMockDatabase();
+
+    const history = getItem('listeningHistory');
+    expect(Array.isArray(history)).toBe(false);
+    expect(getListeningHistory('u1')).toEqual(['song1']);
+    expect(getListeningHistory('u2')).toEqual(['song3']);
+    expect(getListeningHistory('u3')).toEqual(['song2', 'song3', 'song4']);
+  });
+
+  it('migrates a legacy flat-array listeningHistory (from an older build) to the per-user shape', () => {
+    setItem('listeningHistory', ['song1', 'song2']);
+    initializeMockDatabase();
+
+    const history = getItem('listeningHistory');
+    expect(Array.isArray(history)).toBe(false);
+    expect(getListeningHistory('u1')).toEqual(['song1']);
+  });
+
+  it('does not overwrite an already-migrated listeningHistory on re-initialization', () => {
+    setItem('listeningHistory', { u1: ['custom-song'] });
+    initializeMockDatabase();
+
+    expect(getListeningHistory('u1')).toEqual(['custom-song']);
+  });
+
+  it('fills in only the missing demo users when an earlier build only seeded u1', () => {
+    // Reproduces a browser that already picked up an earlier per-user fix
+    // which seeded only u1 — u2/u3 must not be left reading `[]` forever.
+    setItem('listeningHistory', { u1: ['song1', 'song2'] });
+    initializeMockDatabase();
+
+    expect(getListeningHistory('u1')).toEqual(['song1', 'song2']); // untouched
+    expect(getListeningHistory('u2')).toEqual(['song3']);
+    expect(getListeningHistory('u3')).toEqual(['song2', 'song3', 'song4']);
+  });
+
+  it('never overwrites a history a user has actually built up by listening', () => {
+    setItem('listeningHistory', { u1: ['song4', 'song3'], u2: ['song1'] });
+    initializeMockDatabase();
+
+    expect(getListeningHistory('u1')).toEqual(['song4', 'song3']);
+    expect(getListeningHistory('u2')).toEqual(['song1']);
+  });
+
   describe('daily stream stats', () => {
     it('returns 0 for a user with no recorded streams', () => {
       expect(getDailyStreams('nobody')).toBe(0);
@@ -100,22 +146,34 @@ describe('Local Storage Data Layer', () => {
     });
   });
 
-  describe('recordListen', () => {
-    it('appends a song id to listeningHistory', () => {
-      setItem('listeningHistory', ['song1']);
-      recordListen('song2');
-      expect(getItem('listeningHistory')).toEqual(['song1', 'song2']);
+  describe('recordListen / getListeningHistory', () => {
+    it('appends a song id to the user\'s listening history', () => {
+      recordListen('u1', 'song1');
+      recordListen('u1', 'song2');
+      expect(getListeningHistory('u1')).toEqual(['song1', 'song2']);
     });
 
     it('does not append a consecutive duplicate', () => {
-      setItem('listeningHistory', ['song1']);
-      recordListen('song1');
-      expect(getItem('listeningHistory')).toEqual(['song1']);
+      recordListen('u1', 'song1');
+      recordListen('u1', 'song1');
+      expect(getListeningHistory('u1')).toEqual(['song1']);
     });
 
-    it('starts a fresh history when none exists yet', () => {
-      recordListen('song1');
-      expect(getItem('listeningHistory')).toEqual(['song1']);
+    it('keeps each user\'s history independent', () => {
+      recordListen('u1', 'song1');
+      recordListen('u2', 'song3');
+      expect(getListeningHistory('u1')).toEqual(['song1']);
+      expect(getListeningHistory('u2')).toEqual(['song3']);
+    });
+
+    it('is a no-op for a missing user id', () => {
+      recordListen(undefined, 'song1');
+      recordListen(null, 'song1');
+      expect(getItem('listeningHistory')).toBeNull();
+    });
+
+    it('returns an empty array for a user with no history', () => {
+      expect(getListeningHistory('nobody')).toEqual([]);
     });
   });
 });
