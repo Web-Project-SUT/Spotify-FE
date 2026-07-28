@@ -1,6 +1,6 @@
 // app/login/page.test.tsx
 import React from 'react';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import LoginPage from './page';
 
@@ -38,33 +38,33 @@ describe('LoginPage', () => {
     expect(loginMock).not.toHaveBeenCalled();
   });
 
-  it('shows an auth error when login returns null', () => {
-    loginMock.mockReturnValue(null);
+  it('shows an auth error when login returns null', async () => {
+    loginMock.mockResolvedValue(null);
     render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'nobody@demo.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
 
-    expect(screen.getByText('No account found with those credentials.')).toBeDefined();
+    expect(await screen.findByText('No account found with those credentials.')).toBeDefined();
   });
 
-  it('redirects to the listener home on successful login', () => {
-    loginMock.mockReturnValue({ id: 'u1', email: 'listener@demo.com', role: 'listener' });
+  it('redirects to the listener home on successful login', async () => {
+    loginMock.mockResolvedValue({ id: 'u1', email: 'listener@demo.com', role: 'listener' });
     render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'listener@demo.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
 
-    expect(replaceMock).toHaveBeenCalledWith('/home');
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/home'));
   });
 
-  it('redirects to the admin dashboard on successful login', () => {
-    loginMock.mockReturnValue({ id: 'u2', email: 'admin@demo.com', role: 'admin' });
+  it('redirects to the admin dashboard on successful login', async () => {
+    loginMock.mockResolvedValue({ id: 'u2', email: 'admin@demo.com', role: 'admin' });
     render(<LoginPage />);
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'admin@demo.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     fireEvent.click(screen.getByRole('button', { name: 'Log in' }));
 
-    expect(replaceMock).toHaveBeenCalledWith('/dashboard');
+    await waitFor(() => expect(replaceMock).toHaveBeenCalledWith('/dashboard'));
   });
 });

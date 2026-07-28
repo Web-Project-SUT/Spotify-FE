@@ -195,6 +195,36 @@ describe('Player', () => {
     render(<Player />);
     expect(screen.queryByText(/Streams:/i)).toBeNull();
   });
+
+  it('restores persisted quality, repeat, and shuffle from preferences on mount', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      if (key === 'userPrefs') {
+        return { __anon__: { playbackQuality: 'low', repeatMode: 'all', shuffle: true, volume: 30 } };
+      }
+      return null;
+    });
+    render(<Player />);
+
+    expect(screen.getByText('LOW')).toBeDefined();
+    expect(screen.getByLabelText('Repeat all')).toBeDefined();
+    expect(screen.getByLabelText('Shuffle').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('persists a shuffle toggle to preferences', () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentTrack') return { title: 'Song', audioUrlHigh: 'h.mp3', audioUrlLow: 'l.mp3' };
+      return null;
+    });
+    render(<Player />);
+
+    fireEvent.click(screen.getByLabelText('Shuffle'));
+
+    expect(localStorageUtils.setItem).toHaveBeenCalledWith(
+      'userPrefs',
+      expect.objectContaining({ __anon__: expect.objectContaining({ shuffle: true }) })
+    );
+  });
 });
 
 describe('Player mobile mode', () => {

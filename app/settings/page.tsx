@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import AppShell from '../../components/AppShell';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
-import { getItem, setItem } from '../../utils/localStorage';
+import { getItem } from '../../utils/localStorage';
+import { readPreferences, writePreferences } from '../../utils/preferences';
 import { LANGUAGES } from '../../utils/i18n';
 import { SubscriptionPrices } from '../../utils/types';
 import { Button, Badge } from '../../components/ui';
@@ -14,23 +15,16 @@ function SettingsContent() {
   const { user, deleteAccount } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const router = useRouter();
-  const [notifLimit, setNotifLimit] = useState(true);
-  const [volume, setVolume] = useState(70);
+  const [notifLimit, setNotifLimit] = useState(false);
+  const [volume, setVolume] = useState(80);
   const [prices, setPrices] = useState<SubscriptionPrices | null>(null);
 
   useEffect(() => {
-    const prefs = getItem('userPrefs');
-    if (prefs) {
-      setNotifLimit(prefs.notifLimit ?? true);
-      setVolume(prefs.volume ?? 70);
-    }
+    const prefs = readPreferences();
+    setNotifLimit(prefs.notifLimit);
+    setVolume(prefs.volume);
     setPrices(getItem('subscriptionPrices'));
   }, []);
-
-  const savePrefs = (next: Record<string, unknown>) => {
-    const prefs = getItem('userPrefs') || {};
-    setItem('userPrefs', { ...prefs, notifLimit, volume, ...next });
-  };
 
   const handleDeleteAccount = () => {
     if (confirm(t('settings.deleteConfirm'))) {
@@ -54,7 +48,7 @@ function SettingsContent() {
             checked={notifLimit}
             onChange={(e) => {
               setNotifLimit(e.target.checked);
-              savePrefs({ notifLimit: e.target.checked });
+              writePreferences({ notifLimit: e.target.checked });
             }}
           />
         </label>
@@ -70,7 +64,7 @@ function SettingsContent() {
             onChange={(e) => {
               const v = Number(e.target.value);
               setVolume(v);
-              savePrefs({ volume: v });
+              writePreferences({ volume: v });
             }}
             className="w-full"
           />

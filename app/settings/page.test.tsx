@@ -56,7 +56,9 @@ describe('SettingsPage language switching', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'es' } });
 
     await waitFor(() => expect(screen.getByText('Ajustes')).toBeDefined());
-    expect(store.userPrefs).toEqual(expect.objectContaining({ language: 'es' }));
+    expect(store.userPrefs).toEqual(
+      expect.objectContaining({ __anon__: expect.objectContaining({ language: 'es' }) })
+    );
     expect(screen.getByText('Preferencias')).toBeDefined();
     expect(screen.getByText('Eliminar cuenta')).toBeDefined();
   });
