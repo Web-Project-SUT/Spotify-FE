@@ -2,7 +2,51 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getItem, setItem, addRecord, deleteRecord, initializeMockDatabase } from '../utils/localStorage';
+import { apiFetch, apiEnabled, apiLogout, storeTokens, clearTokens } from '../utils/api';
+import {
+  hydratePreferences,
+  pullPreferences,
+  flushPending,
+  clearPreferencesBucket,
+  Preferences,
+} from '../utils/preferences';
 import { User, Role, Tier, Gender } from '../utils/types';
+
+interface BackendUser {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  status: string;
+  tier: Tier;
+  bio: string;
+  avatar: string | null;
+  birthDate: string | null;
+  gender: string;
+  preferences: Partial<Preferences>;
+}
+
+interface LoginResponse {
+  access: string;
+  refresh: string;
+  user: BackendUser;
+}
+
+function mapBackendUser(u: BackendUser): User {
+  return {
+    id: u.id,
+    email: u.email,
+    role: u.role,
+    tier: u.role === 'listener' ? u.tier : undefined,
+    status: u.status as User['status'],
+    displayName: u.displayName || undefined,
+    username: u.username || undefined,
+    birthDate: u.birthDate || undefined,
+    gender: (u.gender || undefined) as Gender | undefined,
+    bio: u.bio || undefined,
+  };
+}
 
 interface RegisterListenerInput {
   displayName: string;
@@ -39,7 +83,7 @@ interface RegisterArtistInput {
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => User | null;
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
   deleteAccount: () => void;
   registerListener: (input: RegisterListenerInput) => User;
@@ -59,11 +103,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
+  // Device-B-was-already-logged-in: pick up preference changes made on
+  // another device since this tab last loaded. No polling — see 2.5 in the
+  // preferences-sync plan for why a WebSocket/polling layer is overkill for
+  // six sticky settings fields.
+  useEffect(() => {
+    if (!apiEnabled || !getItem('accessToken')) return;
+    void pullPreferences();
+    void flushPending();
+
+    let lastPull = Date.now();
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastPull < 30_000) return;
+      lastPull = Date.now();
+      void pullPreferences();
+    };
+    const onOnline = () => void flushPending();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', onOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', onOnline);
+    };
+  }, []);
+
   const refresh = useCallback(() => {
     setUser(getItem('currentUser'));
   }, []);
 
-  const login = useCallback((email: string, password: string): User | null => {
+  const login = useCallback(async (email: string, password: string): Promise<User | null> => {
+    if (apiEnabled) {
+      const result = await apiFetch<LoginResponse>('/auth/login/', {
+        method: 'POST',
+        body: { email, password },
+        auth: false,
+      });
+      if (result) {
+        storeTokens(result.access, result.refresh);
+        const mapped = mapBackendUser(result.user);
+        setItem('currentUser', mapped);
+        setUser(mapped);
+        hydratePreferences(result.user.preferences);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
+        }
+        return mapped;
+      }
+      // Backend rejected the login or is unreachable: fall through to the
+      // mock path below so a stopped backend degrades the demo rather than
+      // bricking it entirely.
+    }
+
     const users: User[] = getItem('users') || [];
     const found = users.find(
       (u) => u.email === email && (u.password === undefined || u.password === password)
@@ -84,6 +175,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     if (typeof window !== 'undefined') {
+      void apiLogout();
+      if (user) clearPreferencesBucket(user.id);
+      clearTokens();
       localStorage.removeItem('currentUser');
       localStorage.removeItem('currentTrack');
       localStorage.removeItem('queue');
@@ -94,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
     }
     setUser(null);
-  }, []);
+  }, [user]);
 
   // Removes the account from the users collection, then logs out.
   const deleteAccount = useCallback(() => {

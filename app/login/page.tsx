@@ -39,14 +39,14 @@ export default function LoginPage() {
     return errors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors = validate();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
     setAuthError('');
-    const loggedInUser = login(email, password);
+    const loggedInUser = await login(email, password);
     if (!loggedInUser) {
       setAuthError('No account found with those credentials.');
       return;

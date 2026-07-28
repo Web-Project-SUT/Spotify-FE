@@ -60,7 +60,10 @@ describe('LanguageContext', () => {
     expect(screen.getByTestId('dir').textContent).toBe('rtl');
     expect(document.documentElement.dir).toBe('rtl');
     expect(document.documentElement.lang).toBe('fa');
-    expect(ls.setItem).toHaveBeenCalledWith('userPrefs', expect.objectContaining({ language: 'fa' }));
+    expect(ls.setItem).toHaveBeenCalledWith(
+      'userPrefs',
+      expect.objectContaining({ __anon__: expect.objectContaining({ language: 'fa' }) })
+    );
   });
 
   it('reverts to ltr on es', async () => {
@@ -118,7 +121,10 @@ describe('LanguageContext', () => {
   });
 
   it('merges into the existing userPrefs object instead of clobbering it', async () => {
-    (ls.getItem as any).mockReturnValue({ volume: 42, notifLimit: false });
+    (ls.getItem as any).mockImplementation((key: string) => {
+      if (key === 'userPrefs') return { __anon__: { volume: 42, notifLimit: false } };
+      return null;
+    });
 
     render(
       <LanguageProvider>
@@ -132,7 +138,9 @@ describe('LanguageContext', () => {
     await waitFor(() =>
       expect(ls.setItem).toHaveBeenCalledWith(
         'userPrefs',
-        expect.objectContaining({ volume: 42, notifLimit: false, language: 'fa' })
+        expect.objectContaining({
+          __anon__: expect.objectContaining({ volume: 42, notifLimit: false, language: 'fa' }),
+        })
       )
     );
   });

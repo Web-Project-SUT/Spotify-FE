@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getItem, setItem, recordDailyStream, recordListen } from '../utils/localStorage';
+import { readPreferences, writePreferences } from '../utils/preferences';
 import { Song } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
 
@@ -47,6 +48,14 @@ export default function Player() {
     setSong(getItem('currentTrack'));
     setIsGold(isGoldUser(getItem('currentUser')));
     setQueue(getItem('queue') || []);
+
+    // Sticky playback preferences (not live session state): restored once on
+    // mount from whatever was last synced, same as quality/repeat/shuffle.
+    const prefs = readPreferences();
+    setQuality(prefs.playbackQuality);
+    setRepeat(prefs.repeatMode);
+    setShuffle(prefs.shuffle);
+    setVolume(prefs.volume / 100);
 
     // Keep the bar in sync when another part of the app changes the track.
     const onStorage = () => {
@@ -126,7 +135,32 @@ export default function Player() {
   }, []);
 
   const cycleRepeat = useCallback(() => {
-    setRepeat((r) => (r === 'off' ? 'all' : r === 'all' ? 'one' : 'off'));
+    setRepeat((r) => {
+      const next = r === 'off' ? 'all' : r === 'all' ? 'one' : 'off';
+      writePreferences({ repeatMode: next });
+      return next;
+    });
+  }, []);
+
+  const toggleShuffle = useCallback(() => {
+    setShuffle((s) => {
+      const next = !s;
+      writePreferences({ shuffle: next });
+      return next;
+    });
+  }, []);
+
+  const toggleQuality = useCallback(() => {
+    setQuality((q) => {
+      const next: 'high' | 'low' = q === 'high' ? 'low' : 'high';
+      writePreferences({ playbackQuality: next });
+      return next;
+    });
+  }, []);
+
+  const handleVolumeChange = useCallback((v: number) => {
+    setVolume(v);
+    writePreferences({ volume: Math.round(v * 100) });
   }, []);
 
   const handleEnded = useCallback(() => {
@@ -222,7 +256,7 @@ export default function Player() {
             <div className="flex-1 flex flex-col items-center gap-1 px-4">
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setShuffle((s) => !s)}
+                  onClick={toggleShuffle}
                   aria-label="Shuffle"
                   aria-pressed={shuffle}
                   className={`text-sm ${shuffle ? 'text-black bg-white/90 rounded-full w-7 h-7' : 'text-white/80'}`}
@@ -269,7 +303,7 @@ export default function Player() {
 
             <div className="flex gap-4">
               <button
-                onClick={() => setQuality(quality === 'high' ? 'low' : 'high')}
+                onClick={toggleQuality}
                 className="text-xs border px-2 py-1 rounded"
                 aria-label="Toggle audio quality"
               >
@@ -408,7 +442,7 @@ export default function Player() {
 
             <div className="flex items-center gap-6">
               <button
-                onClick={() => setShuffle((s) => !s)}
+                onClick={toggleShuffle}
                 aria-label="Shuffle"
                 aria-pressed={shuffle}
                 className={`text-lg ${shuffle ? 'text-black bg-white/90 rounded-full w-9 h-9' : 'text-white/80'}`}
@@ -441,7 +475,7 @@ export default function Player() {
                 max="1"
                 step="0.01"
                 value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
+                onChange={(e) => handleVolumeChange(Number(e.target.value))}
                 className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
                 aria-label="Volume"
               />
@@ -449,7 +483,7 @@ export default function Player() {
 
             <div className="flex gap-6">
               <button
-                onClick={() => setQuality(quality === 'high' ? 'low' : 'high')}
+                onClick={toggleQuality}
                 className="text-xs border px-2 py-1 rounded"
                 aria-label="Toggle audio quality"
               >

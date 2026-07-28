@@ -1,7 +1,8 @@
 // context/LanguageContext.tsx
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { getItem, setItem } from '../utils/localStorage';
+import { getItem } from '../utils/localStorage';
+import { readPreferences, writePreferences } from '../utils/preferences';
 import { Language, isRtl, translate } from '../utils/i18n';
 
 interface LanguageContextValue {
@@ -18,7 +19,7 @@ const LanguageContext = createContext<LanguageContextValue | undefined>(undefine
 // language a listener/artist previously set on this shared device.
 const readLanguage = (): Language => {
   if (getItem('currentUser')?.role === 'support') return 'en';
-  return getItem('userPrefs')?.language ?? 'en';
+  return readPreferences().language;
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
@@ -47,8 +48,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [language, dir]);
 
   const setLanguage = useCallback((lang: Language) => {
-    const prefs = getItem('userPrefs') || {};
-    setItem('userPrefs', { ...prefs, language: lang });
+    writePreferences({ language: lang });
     setLanguageState(lang);
   }, []);
 
