@@ -94,13 +94,13 @@ export default function RegisterPage() {
     return errors;
   };
 
-  const handleListenerSubmit = (e: React.FormEvent) => {
+  const handleListenerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors = validateListener();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    registerListener({
+    await registerListener({
       displayName: form.displayName,
       email: form.email,
       password: form.password,
@@ -110,13 +110,13 @@ export default function RegisterPage() {
     router.push('/home');
   };
 
-  const handleArtistSubmit = () => {
+  const handleArtistSubmit = async () => {
     setError('');
     if (!artistForm.email || !artistForm.password || !artistForm.stageName) {
       setError('Email, password, and stage name are required.');
       return;
     }
-    registerArtist(artistForm);
+    await registerArtist(artistForm);
     setArtistSubmitted(true);
   };
 
@@ -160,7 +160,7 @@ export default function RegisterPage() {
         {mode === 'artist' && error && <p className="text-danger text-sm text-center">{error}</p>}
 
         {mode === 'listener' ? (
-          <form onSubmit={handleListenerSubmit} className="space-y-3" noValidate>
+          <form onSubmit={(e) => void handleListenerSubmit(e)} className="space-y-3" noValidate>
             <Input
               label="Display name"
               name="displayName"
@@ -262,7 +262,7 @@ export default function RegisterPage() {
             <Input label="Password" name="artist-password" type="password" value={artistForm.password} onChange={(e) => setArtistForm({ ...artistForm, password: e.target.value })} />
             <Input label="Stage name" name="stageName" value={artistForm.stageName} onChange={(e) => setArtistForm({ ...artistForm, stageName: e.target.value })} />
             <Input label="Portfolio / sample works URL" name="portfolio" value={artistForm.portfolio} onChange={(e) => setArtistForm({ ...artistForm, portfolio: e.target.value })} />
-            <Button className="w-full" onClick={handleArtistSubmit}>
+            <Button className="w-full" onClick={() => void handleArtistSubmit()}>
               Submit application
             </Button>
           </div>

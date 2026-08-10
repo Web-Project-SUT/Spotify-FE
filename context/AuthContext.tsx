@@ -86,9 +86,10 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
   deleteAccount: () => void;
-  registerListener: (input: RegisterListenerInput) => User;
-  registerArtist: (input: RegisterArtistInput) => User;
+  registerListener: (input: RegisterListenerInput) => Promise<User>;
+  registerArtist: (input: RegisterArtistInput) => Promise<User>;
   refresh: () => void;
+  refreshMe: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -129,6 +130,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refresh = useCallback(() => {
+    setUser(getItem('currentUser'));
+  }, []);
+
+  // Re-fetch the authenticated user from the backend. Used after the payment
+  // redirect so a tier change (a new active subscription) is reflected
+  // immediately. In mock mode this degrades to re-reading local state.
+  const refreshMe = useCallback(async () => {
+    if (apiEnabled) {
+      const me = await apiFetch<BackendUser>('/auth/me/');
+      if (me) {
+        const mapped = mapBackendUser(me);
+        setItem('currentUser', mapped);
+        setUser(mapped);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
+        }
+        return;
+      }
+    }
     setUser(getItem('currentUser'));
   }, []);
 
@@ -196,7 +216,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout();
   }, [user, logout]);
 
-  const registerListener = useCallback((input: RegisterListenerInput): User => {
+  const registerListener = useCallback(async (input: RegisterListenerInput): Promise<User> => {
+    if (apiEnabled) {
+      // The listener endpoint returns tokens alongside the user, so a
+      // successful registration is also a login — no separate follow-up
+      // call needed. acceptedPolicy is required server-side; the register
+      // form already gates submission on the user checking that box.
+      const result = await apiFetch<LoginResponse>('/auth/register/listener/', {
+        method: 'POST',
+        auth: false,
+        body: {
+          email: input.email,
+          password: input.password,
+          displayName: input.displayName,
+          birthDate: input.birthDate || null,
+          gender: input.gender || '',
+          acceptedPolicy: true,
+        },
+      });
+      if (result) {
+        storeTokens(result.access, result.refresh);
+        const mapped = mapBackendUser(result.user);
+        setItem('currentUser', mapped);
+        setUser(mapped);
+        hydratePreferences(result.user.preferences);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
+        }
+        return mapped;
+      }
+      // Backend rejected or unreachable: fall through to the mock path so
+      // the demo still produces a usable local account.
+    }
+
     const existing: User[] = getItem('users') || [];
     const newUser: User = {
       id: `u-${Date.now()}`,
@@ -221,7 +273,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return newUser;
   }, []);
 
-  const registerArtist = useCallback((input: RegisterArtistInput): User => {
+  const registerArtist = useCallback(async (input: RegisterArtistInput): Promise<User> => {
+    if (apiEnabled) {
+      // Artist registration returns only the user (no tokens): the account
+      // is created 'pending' and cannot log in until support/admin approves
+      // it, so there is deliberately nothing to auto-login here.
+      const result = await apiFetch<{ user: BackendUser }>('/auth/register/artist/', {
+        method: 'POST',
+        auth: false,
+        body: {
+          email: input.email,
+          password: input.password,
+          stageName: input.stageName,
+          portfolio: input.portfolio || '',
+        },
+      });
+      if (result) return mapBackendUser(result.user);
+      // Fall through to the mock path on failure/unreachable backend.
+    }
+
     // Artist accounts start in 'pending' until support/admin approves them.
     const newArtist: User = {
       id: `a-${Date.now()}`,
@@ -255,7 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, logout, deleteAccount, registerListener, registerArtist, refresh }}
+      value={{ user, loading, login, logout, deleteAccount, registerListener, registerArtist, refresh, refreshMe }}
     >
       {children}
     </AuthContext.Provider>
