@@ -3,8 +3,12 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem, updateRecord } from '../utils/localStorage';
 import { Playlist } from '../utils/types';
+import {
+  loadPlaylists,
+  addTrackToPlaylist,
+  removeTrackFromPlaylist,
+} from '../utils/resources/playlists';
 import { getCurrentUser } from '../utils/auth';
 
 interface AddToPlaylistMenuProps {
@@ -19,9 +23,15 @@ export default function AddToPlaylistMenu({ songId }: AddToPlaylistMenuProps) {
 
   useEffect(() => {
     if (!open) return;
-    const currentUser = getCurrentUser();
-    const allPlaylists: Playlist[] = getItem('playlists') || [];
-    setPlaylists(currentUser ? allPlaylists.filter((p) => p.userId === currentUser.id) : []);
+    let active = true;
+    void (async () => {
+      const currentUser = getCurrentUser();
+      const mine = await loadPlaylists(currentUser?.id);
+      if (active) setPlaylists(mine);
+    })();
+    return () => {
+      active = false;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -39,8 +49,11 @@ export default function AddToPlaylistMenu({ songId }: AddToPlaylistMenuProps) {
     const songIds = inPlaylist
       ? playlist.songIds.filter((id) => id !== songId)
       : [...playlist.songIds, songId];
-    updateRecord('playlists', playlist.id, { songIds });
+    // Optimistic UI, then persist through the resource (real API or mock).
     setPlaylists((prev) => prev.map((p) => (p.id === playlist.id ? { ...p, songIds } : p)));
+    void (inPlaylist
+      ? removeTrackFromPlaylist(playlist.id, songId)
+      : addTrackToPlaylist(playlist.id, songId));
   };
 
   return (

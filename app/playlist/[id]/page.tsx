@@ -3,8 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../../components/AppShell';
-import { getItem, setItem, updateRecord } from '../../../utils/localStorage';
-import { Playlist, Song, User } from '../../../utils/types';
+import { setItem, updateRecord } from '../../../utils/localStorage';
+import { Playlist, Song } from '../../../utils/types';
+import { loadSongs, loadArtistNames } from '../../../utils/resources/catalog';
+import { loadPlaylistDetail } from '../../../utils/resources/playlists';
 import { Button, Card, EmptyState } from '../../../components/ui';
 import AddToPlaylistMenu from '../../../components/AddToPlaylistMenu';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -19,22 +21,26 @@ function PlaylistContent() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    const playlists: Playlist[] = getItem('playlists') || [];
-    const found = playlists.find((p) => p.id === params.id) || null;
-    setPlaylist(found);
-    setNotFound(!found);
-
-    if (found) {
-      const songs: Song[] = getItem('songs') || [];
-      setTracks(found.songIds.map((id) => songs.find((s) => s.id === id)).filter((s): s is Song => !!s));
-
-      const users: User[] = getItem('users') || [];
-      const map: Record<string, string> = {};
-      users.forEach((u) => {
-        if (u.role === 'artist' && u.stageName) map[u.id] = u.stageName;
-      });
-      setArtists(map);
-    }
+    let active = true;
+    void (async () => {
+      const [found, songs, artistMap] = await Promise.all([
+        loadPlaylistDetail(params.id),
+        loadSongs(),
+        loadArtistNames(),
+      ]);
+      if (!active) return;
+      setPlaylist(found);
+      setNotFound(!found);
+      if (found) {
+        setTracks(
+          found.songIds.map((id) => songs.find((s) => s.id === id)).filter((s): s is Song => !!s)
+        );
+        setArtists(artistMap);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [params.id]);
 
   const play = (song: Song) => {
