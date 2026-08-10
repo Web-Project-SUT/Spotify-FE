@@ -47,7 +47,7 @@ async function doRefresh(): Promise<string | null> {
 // each presenting the (now-blacklisted-by-the-first) refresh token.
 let refreshPromise: Promise<string | null> | null = null;
 
-function refreshAccessToken(): Promise<string | null> {
+export function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = doRefresh().finally(() => {
       refreshPromise = null;
@@ -55,6 +55,14 @@ function refreshAccessToken(): Promise<string | null> {
   }
   return refreshPromise;
 }
+
+// Exposed so the multipart upload path (which can't go through the JSON
+// apiFetch) can read the current access token and the API base URL.
+export function getAccessToken(): string | null {
+  return getItem('accessToken');
+}
+
+export const API_BASE_URL = API_URL;
 
 export async function apiFetch<T = unknown>(
   path: string,
