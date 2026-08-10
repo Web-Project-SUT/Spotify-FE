@@ -104,7 +104,6 @@ function SettingsContent() {
           </p>
         )}
         <Button onClick={() => router.push('/upgrade')}>{t('settings.upgradeButton')}</Button>
-        <p className="text-muted text-xs">{t('settings.paymentPhase2')}</p>
       </section>
 
       <section className="bg-surface-2 p-6 rounded-lg">
