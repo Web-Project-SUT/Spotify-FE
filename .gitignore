@@ -43,3 +43,7 @@ next-env.d.ts
 *.tex
 *.md
 !README.md
+
+# Keep committed examples/docs
+!.env.example
+!INTEGRATION.md
