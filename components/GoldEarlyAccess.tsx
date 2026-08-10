@@ -3,8 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem } from '../utils/localStorage';
 import { Song } from '../utils/types';
+import { loadSongs } from '../utils/resources/catalog';
 import { isGoldUser } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -16,14 +16,20 @@ export default function GoldEarlyAccess() {
 
   useEffect(() => {
     setIsGold(isGoldUser());
-
-    // Early access songs are simply the most recently released tracks,
-    // surfaced here before they appear anywhere else for non-gold users.
-    const allSongs: Song[] = getItem('songs') || [];
-    const newest = [...allSongs]
-      .sort((a, b) => (b.year || 0) - (a.year || 0))
-      .slice(0, 4);
-    setEarlyAccessSongs(newest);
+    let active = true;
+    void (async () => {
+      // Early access songs are simply the most recently released tracks,
+      // surfaced here before they appear anywhere else for non-gold users.
+      const allSongs: Song[] = await loadSongs();
+      if (!active) return;
+      const newest = [...allSongs]
+        .sort((a, b) => (b.year || 0) - (a.year || 0))
+        .slice(0, 4);
+      setEarlyAccessSongs(newest);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (!isGold) {

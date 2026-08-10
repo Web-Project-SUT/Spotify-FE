@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getItem, setItem, getListeningHistory } from '../utils/localStorage';
-import { Song, User } from '../utils/types';
+import { Song } from '../utils/types';
+import { loadSongs, loadArtistNames } from '../utils/resources/catalog';
 import { getRecommendations, Recommendation } from '../utils/recommendation';
 import { useLanguage } from '../context/LanguageContext';
 import { getCurrentUser } from '../utils/auth';
@@ -21,15 +22,10 @@ export default function RecommendationEngine() {
     // Reads the current user + their listening history fresh each time, so
     // switching accounts (or listening to a track anywhere in the app)
     // recomputes this row instead of showing a stale/previous user's picks.
-    const refresh = () => {
-      const allSongs: Song[] = getItem('songs') || [];
-      const users: User[] = getItem('users') || [];
+    const refresh = async () => {
+      const [allSongs, artists] = await Promise.all([loadSongs(), loadArtistNames()]);
       const userId = getCurrentUser()?.id;
       const history = getListeningHistory(userId);
-      const artists: Record<string, string> = {};
-      users.forEach((u) => {
-        if (u.role === 'artist') artists[u.id] = u.stageName || 'Unknown artist';
-      });
 
       setState({ recommended: getRecommendations(allSongs, history, userId), artists, loaded: true });
 
@@ -37,13 +33,14 @@ export default function RecommendationEngine() {
       setCurrentPlayingId(currentTrack ? currentTrack.id : null);
     };
 
-    refresh();
+    void refresh();
 
     // Player dispatches a 'storage' event after recording a listen (and
     // AuthContext does the same on login/logout), so this recomputes
     // in place without requiring a page refresh.
-    window.addEventListener('storage', refresh);
-    return () => window.removeEventListener('storage', refresh);
+    const onStorage = () => void refresh();
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   if (!state.loaded || state.recommended.length === 0) return null;
