@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getItem, addRecord, deleteRecord } from '../utils/localStorage';
 import { Playlist, User } from '../utils/types';
+import { loadPlaylists, createPlaylist, deletePlaylist } from '../utils/resources/playlists';
 import { getCurrentUser, getPlaylistLimit, getTier } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -19,15 +19,22 @@ export default function PlaylistManager() {
     const currentUser = getCurrentUser();
     setUser(currentUser);
 
-    const allPlaylists: Playlist[] = getItem('playlists') || [];
-    setPlaylists(currentUser ? allPlaylists.filter((p) => p.userId === currentUser.id) : []);
-    setLoaded(true);
+    let active = true;
+    void (async () => {
+      const mine = await loadPlaylists(currentUser?.id);
+      if (!active) return;
+      setPlaylists(mine);
+      setLoaded(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const limit = getPlaylistLimit(user);
   const tier = getTier(user);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!user) return;
 
     // Tier limit per spec: basic = 6, silver = 100, gold = unlimited
@@ -36,20 +43,13 @@ export default function PlaylistManager() {
       return;
     }
 
-    const newPlaylist: Playlist = {
-      id: Date.now().toString(),
-      userId: user.id,
-      title: newTitle || 'New Playlist',
-      songIds: [],
-    };
-
-    addRecord('playlists', newPlaylist);
+    const newPlaylist = await createPlaylist(user.id, newTitle || 'New Playlist');
     setPlaylists([...playlists, newPlaylist]);
     setNewTitle('');
   };
 
-  const handleDelete = (id: string) => {
-    deleteRecord('playlists', id);
+  const handleDelete = async (id: string) => {
+    await deletePlaylist(id);
     setPlaylists(playlists.filter((p) => p.id !== id));
   };
 
@@ -74,7 +74,7 @@ export default function PlaylistManager() {
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
         />
-        <button onClick={handleCreate} className="bg-green-500 px-4 py-2 rounded font-bold">
+        <button onClick={() => void handleCreate()} className="bg-green-500 px-4 py-2 rounded font-bold">
           {t('playlist.create')}
         </button>
       </div>
@@ -88,7 +88,7 @@ export default function PlaylistManager() {
               <Link href={`/playlist/${p.id}`} className="hover:underline flex-1 mr-2">
                 {p.title}
               </Link>
-              <button onClick={() => handleDelete(p.id)} className="text-red-400 text-sm">
+              <button onClick={() => void handleDelete(p.id)} className="text-red-400 text-sm">
                 {t('playlist.delete')}
               </button>
             </li>
