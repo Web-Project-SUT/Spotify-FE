@@ -2,8 +2,9 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem, setItem } from '../utils/localStorage';
-import { Song, Album, User } from '../utils/types';
+import { setItem } from '../utils/localStorage';
+import { Song, Album } from '../utils/types';
+import { loadSongs, loadAlbums, loadArtistNames } from '../utils/resources/catalog';
 import { Card, EmptyState } from './ui';
 import AddToPlaylistMenu from './AddToPlaylistMenu';
 import { useLanguage } from '../context/LanguageContext';
@@ -20,14 +21,21 @@ export default function AlbumsBrowse() {
   const [sort, setSort] = useState<SortKey>('listeners');
 
   useEffect(() => {
-    setSongs(getItem('songs') || []);
-    setAlbums(getItem('albums') || []);
-    const users: User[] = getItem('users') || [];
-    const map: Record<string, string> = {};
-    users.forEach((u) => {
-      if (u.role === 'artist' && u.stageName) map[u.id] = u.stageName;
-    });
-    setArtists(map);
+    let active = true;
+    void (async () => {
+      const [loadedSongs, loadedAlbums, artistMap] = await Promise.all([
+        loadSongs(),
+        loadAlbums(),
+        loadArtistNames(),
+      ]);
+      if (!active) return;
+      setSongs(loadedSongs);
+      setAlbums(loadedAlbums);
+      setArtists(artistMap);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredAlbums = useMemo(() => {

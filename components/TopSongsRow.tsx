@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { getItem, setItem } from '../utils/localStorage';
 import { Song } from '../utils/types';
+import { loadSongs } from '../utils/resources/catalog';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function TopSongsRow() {
@@ -12,19 +13,26 @@ export default function TopSongsRow() {
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch songs from the database
-    const dbSongs: Song[] = getItem('songs') || [];
+    let active = true;
+    void (async () => {
+      // Fetch songs from the backend (or the mock store when it's off).
+      const dbSongs: Song[] = await loadSongs();
+      if (!active) return;
 
-    // Sort by most plays and select the top 5. No fake fallback data —
-    // an empty catalog should render an empty state, not made-up songs.
-    const sortedSongs = [...dbSongs].sort((a, b) => (b.plays || 0) - (a.plays || 0));
-    setSongs(sortedSongs.slice(0, 5));
+      // Sort by most plays and select the top 5. No fake fallback data —
+      // an empty catalog should render an empty state, not made-up songs.
+      const sortedSongs = [...dbSongs].sort((a, b) => (b.plays || 0) - (a.plays || 0));
+      setSongs(sortedSongs.slice(0, 5));
 
-    // Check if a song is currently playing
-    const currentTrack = getItem('currentTrack');
-    if (currentTrack) {
-      setCurrentPlayingId(currentTrack.id);
-    }
+      // Check if a song is currently playing
+      const currentTrack = getItem('currentTrack');
+      if (currentTrack) {
+        setCurrentPlayingId(currentTrack.id);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handlePlay = (song: Song) => {

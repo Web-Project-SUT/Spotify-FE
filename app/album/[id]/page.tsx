@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../../components/AppShell';
-import { getItem, setItem } from '../../../utils/localStorage';
-import { Album, Song, User } from '../../../utils/types';
+import { setItem } from '../../../utils/localStorage';
+import { Album, Song } from '../../../utils/types';
+import { loadSongs, loadAlbums, loadArtistNames } from '../../../utils/resources/catalog';
 import { Button, EmptyState } from '../../../components/ui';
 import AddToPlaylistMenu from '../../../components/AddToPlaylistMenu';
 
@@ -16,16 +17,24 @@ function AlbumContent() {
   const [artistName, setArtistName] = useState('');
 
   useEffect(() => {
-    const albums: Album[] = getItem('albums') || [];
-    const found = albums.find((a) => a.id === params.id) || null;
-    setAlbum(found);
-
-    if (found) {
-      const songs: Song[] = getItem('songs') || [];
-      setTracks(songs.filter((s) => s.artistId === found.artistId));
-      const users: User[] = getItem('users') || [];
-      setArtistName(users.find((u) => u.id === found.artistId)?.stageName || 'Unknown artist');
-    }
+    let active = true;
+    void (async () => {
+      const [albums, songs, artistMap] = await Promise.all([
+        loadAlbums(),
+        loadSongs(),
+        loadArtistNames(),
+      ]);
+      if (!active) return;
+      const found = albums.find((a) => a.id === params.id) || null;
+      setAlbum(found);
+      if (found) {
+        setTracks(songs.filter((s) => s.artistId === found.artistId));
+        setArtistName(artistMap[found.artistId] || 'Unknown artist');
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, [params.id]);
 
   const play = (song: Song) => {
