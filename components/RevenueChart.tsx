@@ -1,8 +1,8 @@
 // components/RevenueChart.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-import { getItem } from '../utils/localStorage';
-import { RevenueData, User } from '../utils/types';
+import { RevenueData } from '../utils/types';
+import { loadAdminOverview } from '../utils/resources/reports';
 
 const TIER_COLORS: Record<string, string> = {
   basic: '#6b7280',
@@ -15,17 +15,16 @@ export default function RevenueChart() {
   const [tierCounts, setTierCounts] = useState<Record<string, number>>({ basic: 0, silver: 0, gold: 0 });
 
   useEffect(() => {
-    const revenue = getItem('revenueData') || [];
-    setData(revenue);
-
-    const users: User[] = getItem('users') || [];
-    const listeners = users.filter((u) => u.role === 'listener');
-    const counts = { basic: 0, silver: 0, gold: 0 };
-    listeners.forEach((u) => {
-      const tier = u.tier || 'basic';
-      counts[tier as 'basic' | 'silver' | 'gold'] += 1;
-    });
-    setTierCounts(counts);
+    let active = true;
+    void (async () => {
+      const overview = await loadAdminOverview();
+      if (!active || !overview) return;
+      setData(overview.revenueSeries);
+      setTierCounts(overview.tierDistribution);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const maxAmount = Math.max(...data.map((d) => d.amount), 1);

@@ -6,7 +6,9 @@
 // off so the mock dashboards keep rendering their localStorage-derived
 // numbers unchanged.
 import { apiEnabled, apiFetch } from '../api';
-import { Payout, RevenueData } from '../types';
+import { getItem } from '../localStorage';
+import { getCurrentUser } from '../auth';
+import { Payout, RevenueData, Song, User } from '../types';
 import { fetchAll, mediaUrl } from './http';
 
 // ---- Artist: my summary -------------------------------------------------
@@ -26,7 +28,18 @@ interface BackendArtistSummary {
 }
 
 export async function loadMyArtistSummary(): Promise<ArtistSummary | null> {
-  if (!apiEnabled) return null;
+  if (!apiEnabled) {
+    // Mock: aggregate the current artist's own tracks from the local store.
+    const me = getCurrentUser();
+    if (!me) return null;
+    const mine: Song[] = (getItem('songs') || []).filter((s: Song) => s.artistId === me.id);
+    return {
+      period: null,
+      totalStreams: mine.reduce((n, s) => n + (s.streamCount || 0), 0),
+      totalListeners: mine.reduce((n, s) => n + (s.listenerCount || 0), 0),
+      totalEarnings: mine.reduce((n, s) => n + (s.earnings || 0), 0),
+    };
+  }
   const data = await apiFetch<BackendArtistSummary>('/reports/artists/me/summary/');
   if (!data) return null;
   return {
@@ -60,7 +73,21 @@ interface BackendTrackStat {
 }
 
 export async function loadMyTrackStats(): Promise<TrackStat[]> {
-  if (!apiEnabled) return [];
+  if (!apiEnabled) {
+    const me = getCurrentUser();
+    if (!me) return [];
+    return (getItem('songs') || [])
+      .filter((s: Song) => s.artistId === me.id)
+      .map((s: Song) => ({
+        id: s.id,
+        title: s.title,
+        cover: typeof s.cover === 'string' && s.cover.startsWith('http') ? s.cover : undefined,
+        streamCount: s.streamCount || 0,
+        listenerCount: s.listenerCount || 0,
+        earnings: s.earnings || 0,
+        releasedAt: '',
+      }));
+  }
   const rows = await fetchAll<BackendTrackStat>('/reports/artists/me/tracks/');
   return rows.map((r) => ({
     id: r.id,
@@ -86,7 +113,7 @@ interface BackendPayout {
 }
 
 export async function loadPayouts(): Promise<Payout[]> {
-  if (!apiEnabled) return [];
+  if (!apiEnabled) return getItem('payouts') || [];
   const rows = await fetchAll<BackendPayout>('/reports/payouts/');
   return rows.map((r) => ({
     id: r.id,
@@ -121,7 +148,25 @@ export interface AdminOverview {
 }
 
 export async function loadAdminOverview(): Promise<AdminOverview | null> {
-  if (!apiEnabled) return null;
+  if (!apiEnabled) {
+    // Mock: revenue series from the local store, tier counts from users.
+    const series: RevenueData[] = getItem('revenueData') || [];
+    const users: User[] = getItem('users') || [];
+    const tierDistribution = { basic: 0, silver: 0, gold: 0 };
+    users
+      .filter((u) => u.role === 'listener')
+      .forEach((u) => {
+        const tier = (u.tier || 'basic') as keyof typeof tierDistribution;
+        if (tier in tierDistribution) tierDistribution[tier] += 1;
+      });
+    return {
+      currentMonthRevenue: series.length ? series[series.length - 1].amount : 0,
+      totalRevenue: series.reduce((n, r) => n + (r.amount || 0), 0),
+      activeSubscriptions: tierDistribution.silver + tierDistribution.gold,
+      revenueSeries: series,
+      tierDistribution,
+    };
+  }
   const data = await apiFetch<BackendAdminOverview>('/reports/admin/overview/');
   if (!data) return null;
   return {
