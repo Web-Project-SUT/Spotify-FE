@@ -1,25 +1,32 @@
 // components/ArtistStatsDashboard.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-import { getItem, deleteRecord } from '../utils/localStorage';
-import { Song } from '../utils/types';
 import { getCurrentUser } from '../utils/auth';
+import { loadMyTrackStats, TrackStat } from '../utils/resources/reports';
+import { deleteTrack } from '../utils/resources/catalog';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function ArtistStatsDashboard() {
   const { t } = useLanguage();
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<TrackStat[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const artist = getCurrentUser();
-    const allSongs: Song[] = getItem('songs') || [];
-    setSongs(artist ? allSongs.filter((s) => s.artistId === artist.id) : []);
-    setLoaded(true);
+    let active = true;
+    void (async () => {
+      const artist = getCurrentUser();
+      const stats = artist ? await loadMyTrackStats() : [];
+      if (!active) return;
+      setSongs(stats);
+      setLoaded(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const handleDelete = (id: string) => {
-    deleteRecord('songs', id);
+  const handleDelete = async (id: string) => {
+    await deleteTrack(id);
     setSongs(songs.filter((s) => s.id !== id));
   };
 
@@ -50,7 +57,7 @@ export default function ArtistStatsDashboard() {
                   <td className="p-2 whitespace-nowrap">{(song.streamCount || 0).toLocaleString()}</td>
                   <td className="p-2 whitespace-nowrap">${(song.earnings || 0).toLocaleString()}</td>
                   <td className="p-2 whitespace-nowrap">
-                    <button onClick={() => handleDelete(song.id)} className="text-red-400">
+                    <button onClick={() => void handleDelete(song.id)} className="text-red-400">
                       {t('artistPanel.delete')}
                     </button>
                   </td>

@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { getItem } from '../utils/localStorage';
 import { User, Song, Album } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
+import { loadArtist, loadSongs, loadAlbums } from '../utils/resources/catalog';
 import { toggleFollow } from '../utils/follow';
 import { Spinner } from './ui';
 
@@ -21,20 +22,42 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
-    const users: User[] = getItem('users') || [];
-    const allSongs: Song[] = getItem('songs') || [];
-    const allAlbums: Album[] = getItem('albums') || [];
-    const user = getCurrentUser();
+    let active = true;
+    void (async () => {
+      const user = getCurrentUser();
+      setCurrentUser(user);
+      setIsGold(isGoldUser(user));
+      setIsFollowing(!!user?.following?.includes(artistId));
 
-    setCurrentUser(user);
-    setIsGold(isGoldUser(user));
-    setIsFollowing(!!user?.following?.includes(artistId));
+      const [detail, allSongs, allAlbums] = await Promise.all([
+        loadArtist(artistId),
+        loadSongs(),
+        loadAlbums(),
+      ]);
+      if (!active) return;
 
-    const foundArtist = users.find((u) => u.id === artistId && u.role === 'artist');
-    if (foundArtist) setArtist(foundArtist);
+      if (detail) {
+        // Overlay mock-only social fields (followers/avatar) when present;
+        // identity (name/bio/verified) comes from the resource loader.
+        const base: Partial<User> =
+          (getItem('users') || []).find((u: User) => u.id === artistId) || {};
+        setArtist({
+          ...base,
+          id: artistId,
+          role: 'artist',
+          stageName: detail.stageName,
+          bio: detail.bio,
+          status: detail.verified ? 'active' : 'pending',
+          followers: base.followers ?? 0,
+        } as User);
+      }
 
-    setSongs(allSongs.filter((s) => s.artistId === artistId));
-    setAlbums(allAlbums.filter((a) => a.artistId === artistId));
+      setSongs(allSongs.filter((s) => s.artistId === artistId));
+      setAlbums(allAlbums.filter((a) => a.artistId === artistId));
+    })();
+    return () => {
+      active = false;
+    };
   }, [artistId]);
 
   const handleFollowToggle = () => {

@@ -7,9 +7,9 @@
 // the exact mock shapes the rest of the app already understands; when it is
 // not, the loaders return the same localStorage values as before, so every
 // mock-mode test keeps passing untouched.
-import { apiEnabled } from '../api';
-import { getItem } from '../localStorage';
-import { Song, Album } from '../types';
+import { apiEnabled, apiFetch } from '../api';
+import { getItem, deleteRecord } from '../localStorage';
+import { Song, Album, User } from '../types';
 import { fetchAll, mediaUrl } from './http';
 
 // ---- Backend response shapes (camelCased by drf-camel-case) -------------
@@ -113,4 +113,93 @@ export async function loadArtistNames(): Promise<Record<string, string>> {
     if (name) map[a.id] = name;
   });
   return map;
+}
+
+// Full artist profile. API mode reads /artists/{id}/ (stage name, bio,
+// verified flag, aggregate plays/listeners); mock mode reconstructs an
+// equivalent object from the seeded users + songs.
+export interface ArtistDetail {
+  id: string;
+  stageName: string;
+  bio: string;
+  verified: boolean;
+  totalPlays: number;
+  totalListeners: number;
+}
+
+interface BackendArtistDetail {
+  id: string;
+  stageName: string;
+  portfolioUrl: string;
+  bio: string;
+  verified: boolean;
+  totalPlays: number;
+  totalListeners: number;
+}
+
+export async function loadArtist(id: string): Promise<ArtistDetail | null> {
+  if (apiEnabled) {
+    const a = await apiFetch<BackendArtistDetail>(`/artists/${id}/`);
+    if (a) {
+      return {
+        id: a.id,
+        stageName: a.stageName,
+        bio: a.bio || '',
+        verified: a.verified,
+        totalPlays: a.totalPlays || 0,
+        totalListeners: a.totalListeners || 0,
+      };
+    }
+  }
+  const users: User[] = getItem('users') || [];
+  const u = users.find((x) => x.id === id);
+  if (!u) return null;
+  const songs: Song[] = getItem('songs') || [];
+  const mine = songs.filter((s) => s.artistId === id);
+  return {
+    id,
+    stageName: u.stageName || u.displayName || 'Unknown artist',
+    bio: u.bio || '',
+    verified: u.status === 'active',
+    totalPlays: mine.reduce((n, s) => n + (s.plays || 0), 0),
+    totalListeners: mine.reduce((n, s) => n + (s.listenerCount || 0), 0),
+  };
+}
+
+// Delete one of the artist's own tracks (DELETE /tracks/{id}/), mirrored
+// into the mock store when the backend is off.
+export async function deleteTrack(id: string): Promise<void> {
+  if (apiEnabled) {
+    await apiFetch(`/tracks/${id}/`, { method: 'DELETE' });
+    return;
+  }
+  deleteRecord('songs', id);
+}
+
+export interface NewTrackInput {
+  title: string;
+  genre?: string;
+  year?: number;
+  lyrics?: string;
+  releaseType: 'single' | 'album';
+  collaborators: string[];
+}
+
+// Create a track's metadata row (POST /tracks/, approved-artists only) and
+// return the new id so the caller can upload audio/cover to it. Returns null
+// when the backend is off — the mock form persists locally instead.
+export async function createTrack(input: NewTrackInput): Promise<string | null> {
+  if (!apiEnabled) return null;
+  const created = await apiFetch<{ id: string }>('/tracks/', {
+    method: 'POST',
+    body: {
+      title: input.title,
+      genre: input.genre || '',
+      releaseYear: input.year ?? null,
+      releaseType: input.releaseType,
+      lyrics: input.lyrics || '',
+      collaborators: input.collaborators,
+    },
+  });
+  return created?.id ?? null;
 }

@@ -3,8 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem } from '../utils/localStorage';
 import { Playlist } from '../utils/types';
+import { loadPlaylists } from '../utils/resources/playlists';
 import { getCurrentUser } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
 import { Card, EmptyState, Button } from './ui';
@@ -25,12 +25,18 @@ export default function RecentPlaylistsRow() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    const allPlaylists: Playlist[] = getItem('playlists') || [];
-    const ownPlaylists = currentUser ? allPlaylists.filter((p) => p.userId === currentUser.id) : [];
-    setHasAnyPlaylists(ownPlaylists.length > 0);
-    setPlaylists(sortByRecency(ownPlaylists).slice(0, MAX_PLAYLISTS));
-    setLoaded(true);
+    let active = true;
+    void (async () => {
+      const currentUser = getCurrentUser();
+      const ownPlaylists = await loadPlaylists(currentUser?.id);
+      if (!active) return;
+      setHasAnyPlaylists(ownPlaylists.length > 0);
+      setPlaylists(sortByRecency(ownPlaylists).slice(0, MAX_PLAYLISTS));
+      setLoaded(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (!loaded) return null;

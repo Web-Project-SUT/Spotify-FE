@@ -1,17 +1,59 @@
 // utils/resources/reports.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-describe('reports resource — API disabled', () => {
+describe('reports resource — API disabled (mock fallback)', () => {
   beforeEach(() => {
     vi.resetModules();
     delete process.env.NEXT_PUBLIC_API_URL;
   });
+  afterEach(() => {
+    vi.doUnmock('../localStorage');
+    vi.doUnmock('../auth');
+  });
 
-  it('returns null/empty so mock dashboards keep their own numbers', async () => {
-    const { loadMyArtistSummary, loadPayouts, loadAdminOverview } = await import('./reports');
-    expect(await loadMyArtistSummary()).toBeNull();
-    expect(await loadPayouts()).toEqual([]);
-    expect(await loadAdminOverview()).toBeNull();
+  it('aggregates the current artist\'s own songs for the summary', async () => {
+    vi.doMock('../auth', () => ({ getCurrentUser: () => ({ id: 'a1' }) }));
+    vi.doMock('../localStorage', () => ({
+      getItem: (key: string) =>
+        key === 'songs'
+          ? [
+              { id: 's1', artistId: 'a1', streamCount: 100, listenerCount: 40, earnings: 5 },
+              { id: 's2', artistId: 'a1', streamCount: 50, listenerCount: 20, earnings: 3 },
+              { id: 's3', artistId: 'other', streamCount: 999, listenerCount: 1, earnings: 9 },
+            ]
+          : [],
+    }));
+    const { loadMyArtistSummary, loadMyTrackStats } = await import('./reports');
+    const summary = await loadMyArtistSummary();
+    expect(summary).toMatchObject({ totalStreams: 150, totalListeners: 60, totalEarnings: 8 });
+    const stats = await loadMyTrackStats();
+    expect(stats.map((s) => s.id)).toEqual(['s1', 's2']);
+  });
+
+  it('builds admin overview from local revenue + users', async () => {
+    vi.doMock('../auth', () => ({ getCurrentUser: () => null }));
+    vi.doMock('../localStorage', () => ({
+      getItem: (key: string) => {
+        if (key === 'revenueData') return [{ month: 'Jul', amount: 100 }, { month: 'Aug', amount: 150 }];
+        if (key === 'users')
+          return [
+            { role: 'listener', tier: 'gold' },
+            { role: 'listener', tier: 'silver' },
+            { role: 'listener', tier: 'basic' },
+            { role: 'listener' },
+            { role: 'artist' },
+          ];
+        return [];
+      },
+    }));
+    const { loadAdminOverview } = await import('./reports');
+    const o = await loadAdminOverview();
+    expect(o).toMatchObject({
+      currentMonthRevenue: 150,
+      totalRevenue: 250,
+      activeSubscriptions: 2,
+      tierDistribution: { basic: 2, silver: 1, gold: 1 },
+    });
   });
 });
 
