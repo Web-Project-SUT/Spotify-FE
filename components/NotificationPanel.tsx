@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { getItem, setItem } from '../utils/localStorage';
 import { Notification, User } from '../utils/types';
+import { loadNotifications, markAllNotificationsRead } from '../utils/resources/notifications';
 import { useLanguage } from '../context/LanguageContext';
 
 // Per spec, the empty-list message and overall framing differ slightly
@@ -27,14 +28,19 @@ export default function NotificationPanel() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const user: User | null = getItem('currentUser');
-    const allNotifications: Notification[] = getItem('notifications') || [];
-
-    setRole(user?.role);
-    // No logged-in user means no notifications to show, rather than crashing
-    // on user.id or silently matching unrelated records.
-    setNotifications(user ? allNotifications.filter((n) => n.userId === user.id) : []);
-    setLoaded(true);
+    let active = true;
+    void (async () => {
+      const user: User | null = getItem('currentUser');
+      setRole(user?.role);
+      // API when enabled, local shared collection otherwise.
+      const mine = await loadNotifications();
+      if (!active) return;
+      setNotifications(mine);
+      setLoaded(true);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const markAsRead = (id: string) => {
@@ -53,6 +59,8 @@ export default function NotificationPanel() {
     const updated = notifications.map((n) => ({ ...n, isRead: true }));
     setNotifications(updated);
     persistAll(updated);
+    // Best-effort server sync (no-op in mock mode).
+    void markAllNotificationsRead();
   };
 
   // Notifications are stored as one shared collection across all users,
