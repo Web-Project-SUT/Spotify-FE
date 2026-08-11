@@ -1,9 +1,10 @@
 // components/GroupSession.tsx
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getItem, setItem } from '../utils/localStorage';
 import { GroupSessionData, Song } from '../utils/types';
 import { getCurrentUser } from '../utils/auth';
+import { openGroupSocket, GroupSocket, SessionAction } from '../utils/resources/groupSocket';
 import { useLanguage } from '../context/LanguageContext';
 
 // Phase 1 simulates "real-time" group listening across browser tabs via
@@ -16,6 +17,8 @@ export default function GroupSession() {
   const [session, setSession] = useState<GroupSessionData | null>(null);
   const [userId, setUserId] = useState<string>('');
   const [copied, setCopied] = useState(false);
+
+  const socketRef = useRef<GroupSocket | null>(null);
 
   // Load current user and any existing session, and subscribe to changes
   // made by other tabs so playback state stays in sync.
@@ -32,6 +35,36 @@ export default function GroupSession() {
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // Real-time sync: when a session is active and the backend is enabled, open
+  // a WebSocket to the group consumer and apply inbound play/pause/seek
+  // events to local state. No-op in mock mode (openGroupSocket returns null),
+  // where cross-tab localStorage sync above still applies.
+  useEffect(() => {
+    if (!session) return;
+    const socket = openGroupSocket(session.id, (event) => {
+      setSession((prev) => {
+        if (!prev) return prev;
+        const next: GroupSessionData = {
+          ...prev,
+          isPlaying: event.action === 'play',
+          progress: event.progress,
+        };
+        setItem(SESSION_KEY, next);
+        return next;
+      });
+    });
+    socketRef.current = socket;
+    return () => {
+      socket?.close();
+      socketRef.current = null;
+    };
+  }, [session?.id]);
+
+  // Broadcast a playback change to the room (no-op in mock mode).
+  const broadcast = useCallback((action: SessionAction, progress: number) => {
+    socketRef.current?.send({ action, progress });
   }, []);
 
   const persist = useCallback((next: GroupSessionData | null) => {
@@ -75,13 +108,16 @@ export default function GroupSession() {
   const togglePlay = () => {
     if (!session) return;
     // Any member can control playback; the change broadcasts to everyone.
-    persist({ ...session, isPlaying: !session.isPlaying });
+    const isPlaying = !session.isPlaying;
+    persist({ ...session, isPlaying });
+    broadcast(isPlaying ? 'play' : 'pause', session.progress || 0);
   };
 
   const playCurrentTrack = () => {
     if (!session) return;
     const track: Song | null = getItem('currentTrack');
     persist({ ...session, currentSongId: track?.id, isPlaying: true, progress: 0 });
+    broadcast('play', 0);
   };
 
   const copyInvite = () => {
