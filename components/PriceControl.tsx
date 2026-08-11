@@ -1,23 +1,47 @@
 // components/PriceControl.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-import { getItem, setItem } from '../utils/localStorage';
+import { getItem } from '../utils/localStorage';
 import { SubscriptionPrices } from '../utils/types';
+import { Plan, loadPlans, updatePlanPrice } from '../utils/resources/subscriptions';
 import { Button } from './ui';
 
 export default function PriceControl() {
   const [prices, setPrices] = useState<SubscriptionPrices>({ silver: 0, gold: 0 });
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const stored = getItem('subscriptionPrices');
-    if (stored) setPrices(stored);
+    let active = true;
+    void (async () => {
+      // Prefer live plan prices; fall back to the locally-stored ones.
+      const loaded = await loadPlans();
+      if (!active) return;
+      setPlans(loaded);
+      const stored = getItem('subscriptionPrices');
+      const next: SubscriptionPrices = { silver: 0, gold: 0, ...(stored || {}) };
+      loaded.forEach((p) => {
+        if (p.tier === 'silver' || p.tier === 'gold') next[p.tier] = p.monthlyPrice;
+      });
+      setPrices(next);
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const update = () => {
-    // Prices are stored as data, never hardcoded — admins change them
-    // here and the whole app reads the new values, no code change needed.
-    setItem('subscriptionPrices', prices);
+  const update = async () => {
+    setSaving(true);
+    // Prices are data, never hardcoded. In API mode each plan is PATCHed
+    // (admin only); in mock mode the local subscriptionPrices are updated.
+    const byTier = (tier: 'silver' | 'gold') =>
+      plans.find((p) => p.tier === tier) || { id: `mock-${tier}`, tier };
+    await Promise.all([
+      updatePlanPrice(byTier('silver'), prices.silver),
+      updatePlanPrice(byTier('gold'), prices.gold),
+    ]);
+    setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -48,7 +72,7 @@ export default function PriceControl() {
             className="bg-surface-3 border border-border rounded px-3 py-2 w-32"
           />
         </div>
-        <Button onClick={update}>Update prices</Button>
+        <Button onClick={() => void update()} disabled={saving}>Update prices</Button>
         {saved && <span className="text-accent text-sm">Saved!</span>}
       </div>
     </div>
