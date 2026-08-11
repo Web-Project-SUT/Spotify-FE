@@ -26,7 +26,7 @@ export async function loadPlans(): Promise<Plan[]> {
     if (plans) {
       return plans
         .filter((p) => p.tier !== 'basic')
-        .map((p) => ({ id: p.id, tier: p.tier, monthlyPrice: Number(p.monthlyPrice) }));
+        .map((p) => ({ id: String(p.id), tier: p.tier, monthlyPrice: Number(p.monthlyPrice) }));
     }
   }
   // Mock: synthesise plans from the locally-stored prices.
@@ -59,4 +59,24 @@ export function applyMockUpgrade(tier: Tier): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
   }
+}
+
+// Admin-only dynamic pricing (Task 29). API mode PATCHes the plan; mock mode
+// writes the local subscriptionPrices used by loadPlans() and the UI.
+export async function updatePlanPrice(
+  plan: { id: string; tier: Tier },
+  monthlyPrice: number
+): Promise<boolean> {
+  if (apiEnabled) {
+    const res = await apiFetch(`/subscriptions/plans/${plan.id}/`, {
+      method: 'PATCH',
+      body: { monthlyPrice },
+    });
+    return res !== null;
+  }
+  const prices = getItem('subscriptionPrices') || { silver: 4.99, gold: 9.99 };
+  if (plan.tier === 'silver' || plan.tier === 'gold') {
+    setItem('subscriptionPrices', { ...prices, [plan.tier]: monthlyPrice });
+  }
+  return true;
 }

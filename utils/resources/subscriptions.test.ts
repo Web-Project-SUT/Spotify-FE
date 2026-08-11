@@ -71,4 +71,20 @@ describe('subscriptions resource — API mode', () => {
     expect(reqUrl).toBe('http://backend.test/api/subscriptions/pay/start/');
     expect(JSON.parse(opts.body)).toEqual({ planId: 'g' });
   });
+
+  it('updatePlanPrice PATCHes the plan with monthlyPrice', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ id: 7, tier: 'gold', monthlyPrice: '11.00' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { updatePlanPrice } = await import('./subscriptions');
+    const ok = await updatePlanPrice({ id: '7', tier: 'gold' }, 11);
+    expect(ok).toBe(true);
+    const [reqUrl, opts] = fetchMock.mock.calls[0];
+    expect(reqUrl).toBe('http://backend.test/api/subscriptions/plans/7/');
+    expect(opts.method).toBe('PATCH');
+    expect(JSON.parse(opts.body)).toEqual({ monthlyPrice: 11 });
+  });
 });
