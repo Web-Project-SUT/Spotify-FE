@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input, Spinner } from '../../components/ui';
 import { getRoleHome, EMAIL_RE } from '../../utils/auth';
+import { requestPasswordReset } from '../../utils/resources/accounts';
 
 export default function ForgotPasswordPage() {
   const { user, loading } = useAuth();
@@ -21,7 +22,7 @@ export default function ForgotPasswordPage() {
     }
   }, [user, loading, router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       setError('Email is required.');
@@ -32,12 +33,13 @@ export default function ForgotPasswordPage() {
       return;
     }
     setError('');
-    // Mock a network "send" — no real email/network in Phase 1.
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
-      setSubmitted(true);
-    }, 600);
+    // The backend returns 204 whether or not the email exists (anti-
+    // enumeration), and mock mode simulates the same. Either way we then
+    // show the neutral confirmation below.
+    await requestPasswordReset(email);
+    setSending(false);
+    setSubmitted(true);
   };
 
   return (
@@ -61,7 +63,7 @@ export default function ForgotPasswordPage() {
             <p className="text-muted text-sm text-center">
               Enter your email and we&apos;ll send recovery instructions.
             </p>
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4" noValidate>
               <Input
                 label="Email"
                 name="email"
