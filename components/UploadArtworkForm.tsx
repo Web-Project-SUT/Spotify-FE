@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { addRecord } from '../utils/localStorage';
 import { getCurrentUser } from '../utils/auth';
+import { createTrack } from '../utils/resources/catalog';
+import { uploadTrackAudio, uploadTrackCover } from '../utils/resources/uploads';
 import { useLanguage } from '../context/LanguageContext';
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/flac', 'audio/x-flac'];
@@ -45,7 +47,16 @@ export default function UploadArtworkForm() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const resetForm = () => {
+    setFormData({ title: '', genre: '', year: '', lyrics: '', collaborators: '', releaseType: 'single' });
+    setAudioFile(null);
+    setCoverFile(null);
+    setCoverPreview(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const artist = getCurrentUser();
@@ -61,39 +72,60 @@ export default function UploadArtworkForm() {
       setError(t('upload.errorAudioRequired'));
       return;
     }
-
-    const newSong = {
-      id: Date.now().toString(),
-      title: formData.title.trim(),
-      artistId: artist.id,
-      cover: coverPreview || '🎵',
-      plays: 0,
-      streamCount: 0,
-      listenerCount: 0,
-      earnings: 0,
-      genre: formData.genre.trim() || undefined,
-      year: formData.year ? parseInt(formData.year, 10) : undefined,
-      lyrics: formData.lyrics.trim() || undefined,
-      collaborators: formData.collaborators
-        ? formData.collaborators.split(',').map((c) => c.trim()).filter(Boolean)
-        : [],
-      releaseType: formData.releaseType,
-      // In phase 2 this filename becomes a real uploaded asset path served
-      // by the backend; for the phase 1 mock we just record the filename.
-      audioFileName: audioFile.name,
-    };
-
-    addRecord('songs', newSong);
     setError(null);
-    setFormData({ title: '', genre: '', year: '', lyrics: '', collaborators: '', releaseType: 'single' });
-    setAudioFile(null);
-    setCoverFile(null);
-    setCoverPreview(null);
-    alert(t('upload.successAlert'));
+
+    const collaborators = formData.collaborators
+      ? formData.collaborators.split(',').map((c) => c.trim()).filter(Boolean)
+      : [];
+
+    setSubmitting(true);
+    try {
+      // API mode: create the track row, then PUT the audio (and cover) to it.
+      const newId = await createTrack({
+        title: formData.title.trim(),
+        genre: formData.genre.trim() || undefined,
+        year: formData.year ? parseInt(formData.year, 10) : undefined,
+        lyrics: formData.lyrics.trim() || undefined,
+        releaseType: formData.releaseType,
+        collaborators,
+      });
+
+      if (newId) {
+        const audioOk = await uploadTrackAudio(newId, { high: audioFile });
+        if (coverFile) await uploadTrackCover(newId, coverFile);
+        if (!audioOk) {
+          setError(t('upload.errorAudioRequired'));
+          return;
+        }
+      } else {
+        // Mock mode: persist locally exactly as before.
+        addRecord('songs', {
+          id: Date.now().toString(),
+          title: formData.title.trim(),
+          artistId: artist.id,
+          cover: coverPreview || '🎵',
+          plays: 0,
+          streamCount: 0,
+          listenerCount: 0,
+          earnings: 0,
+          genre: formData.genre.trim() || undefined,
+          year: formData.year ? parseInt(formData.year, 10) : undefined,
+          lyrics: formData.lyrics.trim() || undefined,
+          collaborators,
+          releaseType: formData.releaseType,
+          audioFileName: audioFile.name,
+        });
+      }
+
+      resetForm();
+      alert(t('upload.successAlert'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-gray-900 p-6 rounded-lg text-white max-w-md space-y-3">
+    <form onSubmit={(e) => void handleSubmit(e)} className="bg-gray-900 p-6 rounded-lg text-white max-w-md space-y-3">
       <h2 className="text-xl font-bold mb-2">{t('upload.title')}</h2>
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
@@ -164,7 +196,7 @@ export default function UploadArtworkForm() {
         )}
       </div>
 
-      <button type="submit" className="bg-green-600 px-4 py-2 mt-2 rounded font-bold">
+      <button type="submit" disabled={submitting} className="bg-green-600 px-4 py-2 mt-2 rounded font-bold disabled:opacity-50">
         {t('upload.submit')}
       </button>
     </form>
