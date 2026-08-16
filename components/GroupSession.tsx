@@ -1,7 +1,7 @@
 // components/GroupSession.tsx
 'use client';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { getItem, setItem } from '../utils/localStorage';
+import { getItem, setItem, removeItem } from '../utils/localStorage';
 import { GroupSessionData, Song } from '../utils/types';
 import { getCurrentUser } from '../utils/auth';
 import { openGroupSocket, GroupSocket, SessionAction } from '../utils/resources/groupSocket';
@@ -70,9 +70,7 @@ export default function GroupSession() {
   const persist = useCallback((next: GroupSessionData | null) => {
     setSession(next);
     if (next) setItem(SESSION_KEY, next);
-    else {
-      if (typeof window !== 'undefined') localStorage.removeItem(SESSION_KEY);
-    }
+    else removeItem(SESSION_KEY);
   }, []);
 
   const createGroup = () => {

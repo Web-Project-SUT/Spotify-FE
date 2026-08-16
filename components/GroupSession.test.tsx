@@ -10,6 +10,7 @@ import * as authUtils from '../utils/auth';
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
+  removeItem: vi.fn(),
 }));
 
 vi.mock('../utils/auth', () => ({
@@ -85,7 +86,6 @@ describe('GroupSession', () => {
   });
 
   it('destroys the group when the last member leaves', async () => {
-    const removeSpy = vi.spyOn(Storage.prototype, 'removeItem');
     (localStorageUtils.getItem as any).mockImplementation((key: string) =>
       key === 'groupSession'
         ? { id: 'abc', hostId: 'u1', members: ['u1'], isPlaying: false, progress: 0 }
@@ -97,8 +97,7 @@ describe('GroupSession', () => {
     fireEvent.click(screen.getByText('Leave group'));
 
     await waitFor(() => expect(screen.getByText('Create group')).toBeDefined());
-    expect(removeSpy).toHaveBeenCalledWith('groupSession');
-    removeSpy.mockRestore();
+    expect(localStorageUtils.removeItem).toHaveBeenCalledWith('groupSession');
   });
 
   it('hands off host role to another member when the host leaves', async () => {
