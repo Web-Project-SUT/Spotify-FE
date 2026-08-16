@@ -90,6 +90,31 @@ describe('playlists resource — API mode', () => {
     expect(p).toMatchObject({ id: 'srv1', userId: 'u1', title: 'Focus' });
   });
 
+  it('createPlaylist returns null and writes nothing when the API rejects it', async () => {
+    // The ghost-playlist bug: a local fallback here shows a playlist that the
+    // API-mode reader never returns, so it vanishes on the next load.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Server Error',
+      json: async () => ({ detail: 'Server error.', code: 'error' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const addRecord = vi.fn();
+    vi.doMock('../localStorage', () => ({
+      getItem: () => [],
+      addRecord,
+      deleteRecord: vi.fn(),
+      updateRecord: vi.fn(),
+    }));
+    const { createPlaylist } = await import('./playlists');
+
+    expect(await createPlaylist('u1', 'Ghost Playlist')).toBeNull();
+    expect(addRecord).not.toHaveBeenCalled();
+    vi.doUnmock('../localStorage');
+  });
+
   it('addTrackToPlaylist sends { track } to the tracks endpoint', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) });
     vi.stubGlobal('fetch', fetchMock);

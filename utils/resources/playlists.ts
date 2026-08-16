@@ -71,19 +71,21 @@ export async function loadPlaylistDetail(id: string): Promise<Playlist | null> {
   return detail ? mapDetail(detail) : null;
 }
 
+// Returns null when the backend refuses the create. It deliberately does NOT
+// fall back to the mock store: loadPlaylists reads only the API in API mode,
+// so a locally-written playlist shows up once, vanishes on the next read, and
+// leaves a stale row in localStorage forever. Callers surface the failure.
 export async function createPlaylist(
   userId: string,
   title: string,
   isPublic = false
-): Promise<Playlist> {
+): Promise<Playlist | null> {
   if (apiEnabled) {
     const created = await apiFetch<BackendPlaylistListItem>('/playlists/', {
       method: 'POST',
       body: { title, isPublic },
     });
-    if (created) return mapListItem(created);
-    // fall through to mock so a transient backend failure still yields a
-    // usable playlist locally rather than dropping the user's action.
+    return created ? mapListItem(created) : null;
   }
   const playlist: Playlist = { id: Date.now().toString(), userId, title, songIds: [], isPublic };
   addRecord('playlists', playlist);

@@ -44,6 +44,12 @@ export default function PlaylistManager() {
     }
 
     const newPlaylist = await createPlaylist(user.id, newTitle || 'New Playlist');
+    if (!newPlaylist) {
+      // The backend refused. Say so — writing a local copy here is what made
+      // playlists reappear and then vanish on the next load.
+      alert(t('playlist.createFailed'));
+      return;
+    }
     setPlaylists([...playlists, newPlaylist]);
     setNewTitle('');
   };
