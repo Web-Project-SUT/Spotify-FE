@@ -22,7 +22,7 @@ interface BackendTrack {
   genre: string | null;
   releaseYear: number | null;
   releasedAt: string | null;
-  releaseType: 'single' | 'album';
+  releaseType: 'single' | 'album_track';
   durationMs: number;
   playCount: number;
   uniqueListenerCount: number;
@@ -181,7 +181,7 @@ export interface NewTrackInput {
   genre?: string;
   year?: number;
   lyrics?: string;
-  releaseType: 'single' | 'album';
+  releaseType: 'single' | 'album_track';
   collaborators: string[];
 }
 

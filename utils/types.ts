@@ -43,7 +43,7 @@ export interface Song {
   genre?: string;
   year?: number;
   collaborators?: string[];
-  releaseType?: 'single' | 'album';
+  releaseType?: 'single' | 'album_track'; // wire values; the backend's ReleaseType choices
   audioFileName?: string; // mock-only; phase 2 replaces this with a real uploaded asset path
   audioUrlHigh?: string; // Optional
   audioUrlLow?: string;  // Optional

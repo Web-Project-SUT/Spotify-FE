@@ -2,6 +2,7 @@
 'use client';
 import React, { useState } from 'react';
 import { addRecord } from '../utils/localStorage';
+import { apiEnabled } from '../utils/api';
 import { getCurrentUser } from '../utils/auth';
 import { createTrack } from '../utils/resources/catalog';
 import { uploadTrackAudio, uploadTrackCover } from '../utils/resources/uploads';
@@ -17,7 +18,7 @@ export default function UploadArtworkForm() {
     year: '',
     lyrics: '',
     collaborators: '',
-    releaseType: 'single' as 'single' | 'album',
+    releaseType: 'single' as 'single' | 'album_track',
   });
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -90,11 +91,18 @@ export default function UploadArtworkForm() {
         collaborators,
       });
 
-      if (newId) {
+      // Which store the track belongs in is decided by apiEnabled alone. Keying
+      // it off a null createTrack would route a *rejected* upload into
+      // localStorage, where only this browser can ever see it.
+      if (apiEnabled) {
+        if (!newId) {
+          setError(t('upload.errorCreateFailed'));
+          return;
+        }
         const audioOk = await uploadTrackAudio(newId, { high: audioFile });
         if (coverFile) await uploadTrackCover(newId, coverFile);
         if (!audioOk) {
-          setError(t('upload.errorAudioRequired'));
+          setError(t('upload.errorAudioUploadFailed'));
           return;
         }
       } else {
@@ -142,8 +150,8 @@ export default function UploadArtworkForm() {
         <label className="flex items-center gap-2">
           <input
             type="radio"
-            checked={formData.releaseType === 'album'}
-            onChange={() => setFormData({ ...formData, releaseType: 'album' })}
+            checked={formData.releaseType === 'album_track'}
+            onChange={() => setFormData({ ...formData, releaseType: 'album_track' })}
           />
           {t('upload.album')}
         </label>

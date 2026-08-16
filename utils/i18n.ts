@@ -143,6 +143,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'upload.errorOnlyArtists': 'Only approved artists can upload artwork.',
     'upload.errorTitleRequired': 'Title is required.',
     'upload.errorAudioRequired': 'An audio file (MP3, WAV, or FLAC) is required.',
+    'upload.errorCreateFailed': 'The server rejected this track. Check the fields and try again.',
+    'upload.errorAudioUploadFailed': 'The track was created but its audio could not be uploaded. Try again.',
     'upload.successAlert': 'Upload successful!',
 
     'notifications.title': 'Notifications',
@@ -301,6 +303,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'upload.errorOnlyArtists': 'فقط هنرمندان تأییدشده می‌توانند اثر بارگذاری کنند.',
     'upload.errorTitleRequired': 'عنوان الزامی است.',
     'upload.errorAudioRequired': 'یک فایل صوتی (MP3، WAV یا FLAC) الزامی است.',
+    'upload.errorCreateFailed': 'سرور این قطعه را نپذیرفت. فیلدها را بررسی و دوباره تلاش کنید.',
+    'upload.errorAudioUploadFailed': 'قطعه ساخته شد اما بارگذاری فایل صوتی آن ناموفق بود. دوباره تلاش کنید.',
     'upload.successAlert': 'بارگذاری با موفقیت انجام شد!',
 
     'notifications.title': 'اعلان‌ها',
@@ -459,6 +463,8 @@ export const translations: Record<Language, Record<string, string>> = {
     'upload.errorOnlyArtists': 'Solo los artistas aprobados pueden subir obras.',
     'upload.errorTitleRequired': 'El título es obligatorio.',
     'upload.errorAudioRequired': 'Se requiere un archivo de audio (MP3, WAV o FLAC).',
+    'upload.errorCreateFailed': 'El servidor rechazó esta pista. Revisa los campos e inténtalo de nuevo.',
+    'upload.errorAudioUploadFailed': 'La pista se creó pero no se pudo subir su audio. Inténtalo de nuevo.',
     'upload.successAlert': '¡Subida exitosa!',
 
     'notifications.title': 'Notificaciones',
