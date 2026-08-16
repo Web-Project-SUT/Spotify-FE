@@ -53,6 +53,7 @@ export default function RecommendationEngine() {
   const handlePlay = (e: React.MouseEvent, rec: Recommendation) => {
     e.stopPropagation();
     setItem('currentTrack', rec.song);
+    setItem('currentPlaylistId', null);
     const remainingQueue = state.recommended
       .filter((r) => r.song.id !== rec.song.id)
       .map((r) => r.song);

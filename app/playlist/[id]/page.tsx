@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppShell from '../../../components/AppShell';
 import { setItem, updateRecord } from '../../../utils/localStorage';
+import { apiEnabled } from '../../../utils/api';
 import { Playlist, Song } from '../../../utils/types';
 import { loadSongs, loadArtistNames } from '../../../utils/resources/catalog';
 import { loadPlaylistDetail } from '../../../utils/resources/playlists';
@@ -45,8 +46,14 @@ function PlaylistContent() {
 
   const play = (song: Song) => {
     setItem('currentTrack', song);
+    // Playback context for the stream report: PlayEvent.playlist is what
+    // makes a playlist show up under "recently played".
+    setItem('currentPlaylistId', playlist?.id ?? null);
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('storage'));
-    if (playlist) {
+    // Mock mode only: in API mode the backend derives lastPlayedAt from the
+    // PlayEvent the Player reports, and writing it here would leave a stale
+    // localStorage row nothing ever reads back.
+    if (playlist && !apiEnabled) {
       updateRecord('playlists', playlist.id, { lastPlayedAt: new Date().toISOString() });
     }
     router.push('/player');

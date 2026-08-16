@@ -4,6 +4,7 @@ import { getItem, setItem, recordDailyStream, recordListen } from '../utils/loca
 import { readPreferences, writePreferences } from '../utils/preferences';
 import { Song } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
+import { recordStream, DAILY_STREAM_QUOTA_CODE } from '../utils/resources/streams';
 import { CoverArt } from './ui';
 
 type RepeatMode = 'off' | 'all' | 'one';
@@ -40,9 +41,13 @@ export default function Player() {
   const [accentColor, setAccentColor] = useState('#1db954');
   const [expanded, setExpanded] = useState(false);
   const [volume, setVolume] = useState(1);
+  // Keyed by song id so switching tracks drops the previous track's banner
+  // without a second effect clearing state (which the lint rules forbid).
+  const [quotaError, setQuotaError] = useState<{ songId: string; detail: string } | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
+  const reportedSongId = useRef<string | null>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -67,20 +72,37 @@ export default function Player() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  // Count one daily stream for the current listener each time a new track
-  // becomes current. Keyed on the song id so re-renders (or resuming the
-  // same track) don't double-count. This is the single write point that
-  // feeds the "Streams today" stat on the profile page and, via
-  // recordListen, the home page's "Recommended for you" personalization.
+  // Count one stream for the current listener each time a new track becomes
+  // current. Keyed on the song id, and additionally guarded by a ref, so
+  // re-renders, resuming the same track, or a StrictMode double-invoke can't
+  // double-count. This is the single write point that feeds the "Streams
+  // today" stat on the profile page and, via recordListen, the home page's
+  // "Recommended for you" personalization.
+  //
+  // In API mode it also POSTs /streams/, which is what actually creates the
+  // PlayEvent every server-side number is derived from — play counts, the
+  // artist dashboard, monthly payouts, and the playlist's "last played".
+  // The backend enforces the tier's daily cap on that call, so a 403 here
+  // is the real limit being hit and playback has to stop.
+  //
   // Dispatching 'storage' afterward (the project's existing same-tab sync
   // trick, since the native event never fires in the tab that wrote the
   // change) lets RecommendationEngine recompute without needing a refresh.
   useEffect(() => {
-    if (!song?.id) return;
+    if (!song?.id || reportedSongId.current === song.id) return;
+    reportedSongId.current = song.id;
+
     const userId = getCurrentUser()?.id;
     recordDailyStream(userId);
     recordListen(userId, song.id);
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('storage'));
+
+    void recordStream(song.id, getItem('currentPlaylistId')).then((error) => {
+      if (error?.code !== DAILY_STREAM_QUOTA_CODE) return;
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      setQuotaError({ songId: song.id, detail: error.detail });
+    });
   }, [song?.id]);
 
   useEffect(() => {
@@ -217,6 +239,10 @@ export default function Player() {
 
   if (!song) return null;
 
+  // Not `quotaError?.songId === song.id`: that is true when both sides are
+  // undefined (no error, and a track with no id), and then dereferences null.
+  const limitReached = quotaError && quotaError.songId === song.id ? quotaError.detail : null;
+
   return (
     <>
       <audio
@@ -319,6 +345,12 @@ export default function Player() {
             </div>
           </div>
 
+          {limitReached && (
+            <p role="alert" className="max-w-6xl mx-auto mt-2 text-xs bg-black/60 rounded px-3 py-2">
+              Daily stream limit reached — upgrade for unlimited listening. ({limitReached})
+            </p>
+          )}
+
           {showQueue && (
             <div className="absolute right-4 bottom-20 w-64 bg-black p-4 border border-gray-700 rounded-lg max-h-64 overflow-y-auto">
               <p className="text-sm font-bold mb-2">Up next</p>
@@ -414,6 +446,12 @@ export default function Player() {
               className="w-56 h-56 max-w-full rounded-lg shadow-lg"
               alt="cover"
             />
+            {limitReached && (
+              <p role="alert" className="w-full text-xs text-center bg-black/60 rounded px-3 py-2">
+                Daily stream limit reached — upgrade for unlimited listening. ({limitReached})
+              </p>
+            )}
+
             <div className="text-center">
               <p className="font-bold text-xl">{song.title}</p>
               {isGold && (

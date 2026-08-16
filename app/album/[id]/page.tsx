@@ -39,6 +39,7 @@ function AlbumContent() {
 
   const play = (song: Song) => {
     setItem('currentTrack', song);
+    setItem('currentPlaylistId', null);
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('storage'));
     router.push('/player');
   };

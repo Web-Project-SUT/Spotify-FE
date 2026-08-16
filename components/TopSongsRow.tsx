@@ -39,6 +39,7 @@ export default function TopSongsRow() {
   const handlePlay = (song: Song) => {
     // Save song as the current track for the music player
     setItem('currentTrack', song);
+    setItem('currentPlaylistId', null);
     setCurrentPlayingId(song.id);
     
     // Dispatch a storage event to notify the player component across the browser
