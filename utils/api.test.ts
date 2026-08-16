@@ -42,6 +42,46 @@ describe('utils/api', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('apiRequest reports a rejection distinctly from a disabled backend', async () => {
+    // The whole point of apiRequest: "the backend said no" must not look like
+    // "there is no backend", or callers silently fall back to the mock store.
+    const { apiRequest } = await loadApi('http://backend.test/api');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: async () => ({
+          detail: 'Validation failed.',
+          code: 'invalid_choice',
+          fields: { releaseType: ['"album" is not a valid choice.'] },
+        }),
+      })
+    );
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const { data, error } = await apiRequest('/tracks/', { method: 'POST', body: {} });
+
+    expect(data).toBeNull();
+    expect(error).toMatchObject({
+      status: 400,
+      detail: 'Validation failed.',
+      code: 'invalid_choice',
+      fields: { releaseType: ['"album" is not a valid choice.'] },
+    });
+    expect(console.error).toHaveBeenCalled();
+  });
+
+  it('apiRequest returns neither data nor error when the backend is disabled', async () => {
+    const { apiRequest } = await loadApi(undefined);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    expect(await apiRequest('/tracks/')).toEqual({ data: null, error: null });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('attaches Authorization: Bearer <token> when an access token is stored', async () => {
     const { apiFetch } = await loadApi('http://api.test');
     store.accessToken = 'access-123';

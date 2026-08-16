@@ -18,6 +18,21 @@ interface ApiFetchOptions {
   auth?: boolean;
 }
 
+// The normalized error body every backend view produces
+// (apps.common.exceptions.api_exception_handler), plus the status that
+// carried it. `status: 0` means the request never reached the server.
+export interface ApiError {
+  status: number;
+  detail: string;
+  code?: string;
+  fields?: Record<string, string[]>;
+}
+
+export interface ApiResult<T> {
+  data: T | null;
+  error: ApiError | null;
+}
+
 async function doRefresh(): Promise<string | null> {
   const refresh = getItem('refreshToken');
   if (!refresh) return null;
@@ -64,11 +79,19 @@ export function getAccessToken(): string | null {
 
 export const API_BASE_URL = API_URL;
 
-export async function apiFetch<T = unknown>(
+// The full-fidelity request. Callers that need to tell "the backend is
+// switched off" apart from "the backend said no" use this; `apiFetch` below
+// is the thin `T | null` wrapper the rest of the app already speaks.
+//
+// The distinction matters: collapsing both into `null` is what made every
+// server-side rejection look like mock mode and silently reroute writes into
+// localStorage. `{ data: null, error: null }` means disabled; a non-null
+// `error` means the server rejected us and the caller must not fall back.
+export async function apiRequest<T = unknown>(
   path: string,
   { method = 'GET', body, auth = true }: ApiFetchOptions = {}
-): Promise<T | null> {
-  if (!apiEnabled) return null;
+): Promise<ApiResult<T>> {
+  if (!apiEnabled) return { data: null, error: null };
 
   const request = (token: string | null): Promise<Response> => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -85,16 +108,58 @@ export async function apiFetch<T = unknown>(
 
     if (response.status === 401 && auth) {
       const token = await refreshAccessToken();
-      if (!token) return null;
+      if (!token) {
+        return { data: null, error: failure(method, path, 401, 'Not authenticated.') };
+      }
       response = await request(token);
     }
 
-    if (!response.ok) return null;
-    if (response.status === 204) return null;
-    return (await response.json()) as T;
-  } catch {
-    return null;
+    if (!response.ok) {
+      return { data: null, error: await readError(method, path, response) };
+    }
+    if (response.status === 204) return { data: null, error: null };
+    return { data: (await response.json()) as T, error: null };
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : 'Network request failed.';
+    return { data: null, error: failure(method, path, 0, detail) };
   }
+}
+
+// Parse the backend's { detail, code, fields } body and log it. Without this
+// a 400 is invisible: no throw, no console entry, just a null return.
+async function readError(method: string, path: string, response: Response): Promise<ApiError> {
+  let parsed: Partial<ApiError> = {};
+  try {
+    parsed = (await response.json()) as Partial<ApiError>;
+  } catch {
+    // Not JSON (a proxy error page, an empty body) — the status is all we get.
+  }
+  return failure(method, path, response.status, parsed.detail || response.statusText, parsed);
+}
+
+function failure(
+  method: string,
+  path: string,
+  status: number,
+  detail: string,
+  extra: Partial<ApiError> = {}
+): ApiError {
+  const error: ApiError = {
+    status,
+    detail: detail || 'Request failed.',
+    code: extra.code,
+    fields: extra.fields,
+  };
+  console.error(`[api] ${method} ${path} -> ${status || 'network error'}`, error);
+  return error;
+}
+
+export async function apiFetch<T = unknown>(
+  path: string,
+  options: ApiFetchOptions = {}
+): Promise<T | null> {
+  const { data } = await apiRequest<T>(path, options);
+  return data;
 }
 
 // A live refresh token surviving logout is a real session left standing;
