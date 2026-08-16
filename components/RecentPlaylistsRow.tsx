@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Playlist } from '../utils/types';
-import { loadPlaylists } from '../utils/resources/playlists';
+import { loadRecentPlaylists } from '../utils/resources/playlists';
 import { getCurrentUser } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
 import { Card, EmptyState, Button } from './ui';
@@ -28,7 +28,7 @@ export default function RecentPlaylistsRow() {
     let active = true;
     void (async () => {
       const currentUser = getCurrentUser();
-      const ownPlaylists = await loadPlaylists(currentUser?.id);
+      const ownPlaylists = await loadRecentPlaylists(currentUser?.id);
       if (!active) return;
       setHasAnyPlaylists(ownPlaylists.length > 0);
       setPlaylists(sortByRecency(ownPlaylists).slice(0, MAX_PLAYLISTS));
@@ -73,7 +73,9 @@ export default function RecentPlaylistsRow() {
                 🎵
               </div>
               <p className="font-bold truncate">{playlist.title}</p>
-              <p className="text-muted text-sm truncate">{playlist.songIds.length} songs</p>
+              <p className="text-muted text-sm truncate">
+                {playlist.trackCount ?? playlist.songIds.length} songs
+              </p>
             </Card>
           ))}
         </div>

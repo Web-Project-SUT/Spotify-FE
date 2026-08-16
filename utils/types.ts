@@ -64,6 +64,9 @@ export interface Playlist {
   songIds: string[];
   isPublic?: boolean;
   lastPlayedAt?: string; // ISO timestamp; set when the playlist is played
+  // Set only by the API list projection, which returns a count instead of
+  // the track ids. Prefer it over songIds.length for display.
+  trackCount?: number;
 }
 
 export interface Notification {

@@ -23,6 +23,7 @@ interface BackendPlaylistListItem {
   cover: string | null;
   createdAt: string;
   trackCount: number;
+  lastPlayedAt: string | null;
 }
 
 interface BackendPlaylistTrack {
@@ -40,7 +41,17 @@ interface BackendPlaylistDetail extends Omit<BackendPlaylistListItem, 'trackCoun
 function mapListItem(p: BackendPlaylistListItem): Playlist {
   // songIds is intentionally empty in the list projection — the backend
   // list endpoint returns only a count. The detail loader fills real ids.
-  return { id: p.id, userId: p.owner, title: p.title, isPublic: p.isPublic, songIds: [] };
+  return {
+    id: p.id,
+    userId: p.owner,
+    title: p.title,
+    isPublic: p.isPublic,
+    songIds: [],
+    // Derived server-side from the playlist's PlayEvents; null until the
+    // playlist has actually been played.
+    lastPlayedAt: p.lastPlayedAt ?? undefined,
+    trackCount: p.trackCount,
+  };
 }
 
 function mapDetail(p: BackendPlaylistDetail): Playlist {
@@ -59,6 +70,16 @@ export async function loadPlaylists(userId: string | undefined): Promise<Playlis
     return userId ? all.filter((p) => p.userId === userId) : [];
   }
   const items = await fetchAll<BackendPlaylistListItem>('/playlists/');
+  return items.map(mapListItem);
+}
+
+// The user's playlists ordered most-recently-played first (backend puts the
+// never-played ones last). It returns *all* of them, not just the played
+// ones, so callers can still tell "no playlists yet" from "nothing played
+// recently" — the two empty states the home row distinguishes.
+export async function loadRecentPlaylists(userId: string | undefined): Promise<Playlist[]> {
+  if (!apiEnabled) return loadPlaylists(userId);
+  const items = await fetchAll<BackendPlaylistListItem>('/playlists/recent/');
   return items.map(mapListItem);
 }
 

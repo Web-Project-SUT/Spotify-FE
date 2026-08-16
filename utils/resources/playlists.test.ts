@@ -150,3 +150,66 @@ describe('playlists resource — API mode', () => {
     expect(detail?.songIds).toEqual(['t1', 't2']);
   });
 });
+
+describe('recently played playlists', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_API_URL;
+    vi.doUnmock('../localStorage');
+    vi.restoreAllMocks();
+  });
+
+  it('falls back to the mock store when the backend is off', async () => {
+    delete process.env.NEXT_PUBLIC_API_URL;
+    vi.doMock('../localStorage', () => ({
+      getItem: (key: string) =>
+        key === 'playlists'
+          ? [{ id: 'p1', userId: 'u1', title: 'Mine', songIds: [], lastPlayedAt: '2026-06-01' }]
+          : [],
+      addRecord: vi.fn(),
+      deleteRecord: vi.fn(),
+      updateRecord: vi.fn(),
+    }));
+    const { loadRecentPlaylists } = await import('./playlists');
+    expect(await loadRecentPlaylists('u1')).toEqual([
+      { id: 'p1', userId: 'u1', title: 'Mine', songIds: [], lastPlayedAt: '2026-06-01' },
+    ]);
+  });
+
+  it('reads /playlists/recent/ and maps lastPlayedAt in API mode', async () => {
+    process.env.NEXT_PUBLIC_API_URL = 'http://backend.test/api';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          count: 2,
+          next: null,
+          previous: null,
+          results: [
+            {
+              id: 'p1', owner: 'u1', title: 'Played', isPublic: false, cover: null,
+              createdAt: '2026-01-01', trackCount: 1, lastPlayedAt: '2026-06-01T10:00:00Z',
+            },
+            {
+              id: 'p2', owner: 'u1', title: 'Never', isPublic: false, cover: null,
+              createdAt: '2026-01-01', trackCount: 0, lastPlayedAt: null,
+            },
+          ],
+        }),
+      })
+    );
+
+    const { loadRecentPlaylists } = await import('./playlists');
+    const playlists = await loadRecentPlaylists('u1');
+
+    expect((globalThis.fetch as any).mock.calls[0][0]).toBe(
+      'http://backend.test/api/playlists/recent/'
+    );
+    expect(playlists[0].lastPlayedAt).toBe('2026-06-01T10:00:00Z');
+    expect(playlists[1].lastPlayedAt).toBeUndefined();
+  });
+});
