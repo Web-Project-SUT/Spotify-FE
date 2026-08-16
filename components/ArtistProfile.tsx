@@ -7,7 +7,7 @@ import { User, Song, Album } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
 import { loadArtist, loadSongs, loadAlbums } from '../utils/resources/catalog';
 import { toggleFollow } from '../utils/follow';
-import { Spinner } from './ui';
+import { CoverArt, Spinner } from './ui';
 
 interface ArtistProfileProps {
   artistId: string;
@@ -86,9 +86,12 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
   return (
     <div className="bg-gray-900 min-h-screen text-white pb-10">
       <div className="bg-gradient-to-b from-indigo-900 to-gray-900 p-4 sm:p-6 lg:p-10 flex flex-col sm:flex-row items-start sm:items-end gap-6 h-auto sm:h-72">
-        <div className="w-24 h-24 sm:w-40 sm:h-40 bg-indigo-500 rounded-full flex items-center justify-center text-5xl sm:text-7xl shadow-2xl border-4 border-gray-900 flex-shrink-0">
-          {artist.cover || '👤'}
-        </div>
+        <CoverArt
+          cover={artist.cover}
+          fallback="👤"
+          alt={artist.stageName || ''}
+          className="w-24 h-24 sm:w-40 sm:h-40 bg-indigo-500 rounded-full text-5xl sm:text-7xl shadow-2xl border-4 border-gray-900"
+        />
         <div>
           {artist.status === 'active' && (
             <div className="flex items-center gap-2 mb-2">
@@ -141,9 +144,12 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
                 {albums.map((album) => (
                   <div key={album.id} className="bg-gray-800/50 p-4 rounded-xl hover:bg-gray-800 transition cursor-pointer">
-                    <div className="w-full aspect-square bg-gray-700 rounded-lg mb-4 flex items-center justify-center text-5xl shadow-md">
-                      {album.cover || '💿'}
-                    </div>
+                    <CoverArt
+                      cover={album.cover}
+                      fallback="💿"
+                      alt={album.title}
+                      className="w-full aspect-square bg-gray-700 rounded-lg mb-4 text-5xl shadow-md"
+                    />
                     <h3 className="font-bold text-white truncate text-lg">{album.title}</h3>
                     <p className="text-gray-400 text-sm mt-1">{album.releaseYear}</p>
                   </div>

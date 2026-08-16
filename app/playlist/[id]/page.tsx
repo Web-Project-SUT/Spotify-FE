@@ -7,7 +7,7 @@ import { setItem, updateRecord } from '../../../utils/localStorage';
 import { Playlist, Song } from '../../../utils/types';
 import { loadSongs, loadArtistNames } from '../../../utils/resources/catalog';
 import { loadPlaylistDetail } from '../../../utils/resources/playlists';
-import { Button, Card, EmptyState } from '../../../components/ui';
+import { Button, Card, CoverArt, EmptyState } from '../../../components/ui';
 import AddToPlaylistMenu from '../../../components/AddToPlaylistMenu';
 import { useLanguage } from '../../../context/LanguageContext';
 
@@ -95,9 +95,11 @@ function PlaylistContent() {
               <div className="absolute top-2 right-2">
                 <AddToPlaylistMenu songId={song.id} />
               </div>
-              <div className="aspect-square bg-surface-3 rounded mb-3 flex items-center justify-center text-5xl">
-                {song.cover && song.cover.length <= 2 ? song.cover : '🎵'}
-              </div>
+              <CoverArt
+                cover={song.cover}
+                alt={song.title}
+                className="aspect-square bg-surface-3 rounded mb-3 text-5xl"
+              />
               <p className="font-bold truncate">{song.title}</p>
               <button
                 onClick={(e) => goToArtist(e, song.artistId)}

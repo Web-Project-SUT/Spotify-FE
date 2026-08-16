@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getItem } from '../utils/localStorage';
 import { Album, User } from '../utils/types';
 import { useLanguage } from '../context/LanguageContext';
-import { Card, EmptyState } from './ui';
+import { Card, CoverArt, EmptyState } from './ui';
 
 const MAX_ALBUMS = 8;
 
@@ -50,9 +50,12 @@ export default function LatestAlbumsRow() {
               className="min-w-[160px]"
               onClick={() => router.push(`/album/${album.id}`)}
             >
-              <div className="aspect-square bg-surface-3 rounded mb-3 flex items-center justify-center text-5xl">
-                {album.cover || '💿'}
-              </div>
+              <CoverArt
+                cover={album.cover}
+                fallback="💿"
+                alt={album.title}
+                className="aspect-square bg-surface-3 rounded mb-3 text-5xl"
+              />
               <p className="font-bold truncate">{album.title}</p>
               <button
                 onClick={(e) => goToArtist(e, album.artistId)}

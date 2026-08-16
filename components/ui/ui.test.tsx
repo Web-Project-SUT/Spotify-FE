@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Button, Input, Badge, Avatar, EmptyState, Spinner } from './index';
+import { Button, Input, Badge, Avatar, CoverArt, EmptyState, Spinner } from './index';
 
 afterEach(cleanup);
 
@@ -40,6 +40,29 @@ describe('UI primitives', () => {
   it('Avatar renders an emoji avatar', () => {
     render(<Avatar src="🎤" name="Nova" />);
     expect(screen.getByText('🎤')).toBeDefined();
+  });
+
+  it('CoverArt renders a real cover URL as an image, not text', () => {
+    // The C-10 bug: a real cover URL was rendered as a text node and, being
+    // longer than 2 chars, always lost to the emoji fallback.
+    const { container } = render(
+      <CoverArt cover="http://localhost:8000/media/covers/neon.png" alt="Neon Skyline" />
+    );
+    const img = container.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toBe('http://localhost:8000/media/covers/neon.png');
+    expect(screen.queryByText('🎵')).toBeNull();
+  });
+
+  it('CoverArt keeps rendering mock emoji covers as text', () => {
+    const { container } = render(<CoverArt cover="💿" />);
+    expect(screen.getByText('💿')).toBeDefined();
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('CoverArt falls back to the given emoji when there is no cover', () => {
+    render(<CoverArt fallback="💿" />);
+    expect(screen.getByText('💿')).toBeDefined();
   });
 
   it('EmptyState renders title, description, and action', () => {

@@ -6,6 +6,7 @@ import { getItem, setItem } from '../utils/localStorage';
 import { Song } from '../utils/types';
 import { loadSongs } from '../utils/resources/catalog';
 import { useLanguage } from '../context/LanguageContext';
+import { CoverArt } from './ui';
 
 export default function TopSongsRow() {
   const { t } = useLanguage();
@@ -59,7 +60,7 @@ export default function TopSongsRow() {
             className="min-w-[160px] bg-gray-800 p-4 rounded-lg flex flex-col items-center hover:bg-gray-700 transition relative group"
           >
             <div className="w-24 h-24 bg-gray-600 rounded-md flex items-center justify-center text-4xl mb-4 shadow-lg relative overflow-hidden">
-              {song.cover || '🎵'}
+              <CoverArt cover={song.cover} alt={song.title} className="w-full h-full" />
               
               {/* Play button shown only on hover */}
               <button 

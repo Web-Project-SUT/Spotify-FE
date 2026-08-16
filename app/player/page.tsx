@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getItem } from '../../utils/localStorage';
 import { Song } from '../../utils/types';
-import { Button, EmptyState } from '../../components/ui';
+import { Button, CoverArt, EmptyState } from '../../components/ui';
 
 export default function PlayerPage() {
   const router = useRouter();
@@ -24,9 +24,11 @@ export default function PlayerPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 md:p-8 pb-32">
-      <div className="w-48 h-48 sm:w-64 sm:h-64 bg-surface-3 rounded-lg flex items-center justify-center text-6xl sm:text-8xl mb-6">
-        {song.cover && song.cover.length <= 2 ? song.cover : '🎵'}
-      </div>
+      <CoverArt
+        cover={song.cover}
+        alt={song.title}
+        className="w-48 h-48 sm:w-64 sm:h-64 bg-surface-3 rounded-lg text-6xl sm:text-8xl mb-6"
+      />
       <h1 className="text-2xl font-bold">{song.title}</h1>
       {song.lyrics && (
         <div className="mt-8 max-w-md text-center text-muted whitespace-pre-line">{song.lyrics}</div>

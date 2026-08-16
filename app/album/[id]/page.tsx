@@ -6,7 +6,7 @@ import AppShell from '../../../components/AppShell';
 import { setItem } from '../../../utils/localStorage';
 import { Album, Song } from '../../../utils/types';
 import { loadSongs, loadAlbums, loadArtistNames } from '../../../utils/resources/catalog';
-import { Button, EmptyState } from '../../../components/ui';
+import { Button, CoverArt, EmptyState } from '../../../components/ui';
 import AddToPlaylistMenu from '../../../components/AddToPlaylistMenu';
 
 function AlbumContent() {
@@ -50,9 +50,12 @@ function AlbumContent() {
   return (
     <div className="p-4 md:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-end gap-6 mb-8">
-        <div className="w-32 h-32 sm:w-44 sm:h-44 bg-surface-3 rounded-lg flex items-center justify-center text-5xl sm:text-7xl flex-shrink-0">
-          {album.cover || '💿'}
-        </div>
+        <CoverArt
+          cover={album.cover}
+          fallback="💿"
+          alt={album.title}
+          className="w-32 h-32 sm:w-44 sm:h-44 bg-surface-3 rounded-lg text-5xl sm:text-7xl"
+        />
         <div>
           <p className="text-muted text-sm uppercase">Album</p>
           <h1 className="text-2xl sm:text-4xl font-bold">{album.title}</h1>

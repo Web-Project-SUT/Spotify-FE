@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { setItem } from '../utils/localStorage';
 import { Song, Album } from '../utils/types';
 import { loadSongs, loadAlbums, loadArtistNames } from '../utils/resources/catalog';
-import { Card, EmptyState } from './ui';
+import { Card, CoverArt, EmptyState } from './ui';
 import AddToPlaylistMenu from './AddToPlaylistMenu';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -111,9 +111,12 @@ export default function AlbumsBrowse() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {filteredAlbums.map((album) => (
                   <Card key={album.id} hoverable onClick={(e) => goToAlbum(e, album.id)}>
-                    <div className="aspect-square bg-surface-3 rounded mb-3 flex items-center justify-center text-5xl">
-                      {album.cover || '💿'}
-                    </div>
+                    <CoverArt
+                      cover={album.cover}
+                      fallback="💿"
+                      alt={album.title}
+                      className="aspect-square bg-surface-3 rounded mb-3 text-5xl"
+                    />
                     <p className="font-bold truncate">{album.title}</p>
                     <button onClick={(e) => goToArtist(e, album.artistId)} className="text-muted text-sm hover:underline truncate block">
                       {artists[album.artistId] || t('browse.unknownArtist')}
@@ -133,9 +136,11 @@ export default function AlbumsBrowse() {
                     <div className="absolute top-2 right-2">
                       <AddToPlaylistMenu songId={song.id} />
                     </div>
-                    <div className="aspect-square bg-surface-3 rounded mb-3 flex items-center justify-center text-5xl">
-                      {song.cover && song.cover.length <= 2 ? song.cover : '🎵'}
-                    </div>
+                    <CoverArt
+                      cover={song.cover}
+                      alt={song.title}
+                      className="aspect-square bg-surface-3 rounded mb-3 text-5xl"
+                    />
                     <p className="font-bold truncate">{song.title}</p>
                     <button onClick={(e) => goToArtist(e, song.artistId)} className="text-muted text-sm hover:underline truncate block">
                       {artists[song.artistId] || t('browse.unknownArtist')}

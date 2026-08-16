@@ -8,7 +8,7 @@ import { loadSongs, loadArtistNames } from '../utils/resources/catalog';
 import { getRecommendations, Recommendation } from '../utils/recommendation';
 import { useLanguage } from '../context/LanguageContext';
 import { getCurrentUser } from '../utils/auth';
-import { Card } from './ui';
+import { Card, CoverArt } from './ui';
 import AddToPlaylistMenu from './AddToPlaylistMenu';
 
 export default function RecommendationEngine() {
@@ -68,7 +68,7 @@ export default function RecommendationEngine() {
         {state.recommended.map((rec) => (
           <Card key={rec.song.id} className="min-w-[160px] group relative">
             <div className="aspect-square bg-surface-3 rounded mb-3 flex items-center justify-center text-4xl relative overflow-hidden">
-              {rec.song.cover || '🎵'}
+              <CoverArt cover={rec.song.cover} alt={rec.song.title} className="w-full h-full" />
               <button
                 onClick={(e) => handlePlay(e, rec)}
                 aria-label={`Play ${rec.song.title}`}

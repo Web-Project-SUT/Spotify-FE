@@ -4,6 +4,7 @@ import { getItem, setItem, recordDailyStream, recordListen } from '../utils/loca
 import { readPreferences, writePreferences } from '../utils/preferences';
 import { Song } from '../utils/types';
 import { isGoldUser, getCurrentUser } from '../utils/auth';
+import { CoverArt } from './ui';
 
 type RepeatMode = 'off' | 'all' | 'one';
 
@@ -331,7 +332,7 @@ export default function Player() {
                       onClick={() => playFromQueue(q)}
                       className="text-xs flex items-center gap-2 hover:bg-gray-800 p-1 rounded cursor-pointer"
                     >
-                      <span>{q.cover || '🎵'}</span>
+                      <CoverArt cover={q.cover} alt={q.title} className="w-6 h-6 rounded" />
                       <span className="truncate">{q.title}</span>
                     </li>
                   ))}
@@ -510,7 +511,7 @@ export default function Player() {
                         onClick={() => playFromQueue(q)}
                         className="text-xs flex items-center gap-2 hover:bg-black/30 p-1 rounded cursor-pointer"
                       >
-                        <span>{q.cover || '🎵'}</span>
+                        <CoverArt cover={q.cover} alt={q.title} className="w-6 h-6 rounded" />
                         <span className="truncate">{q.title}</span>
                       </li>
                     ))}

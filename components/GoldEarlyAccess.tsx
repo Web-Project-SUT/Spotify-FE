@@ -7,6 +7,7 @@ import { Song } from '../utils/types';
 import { loadSongs } from '../utils/resources/catalog';
 import { isGoldUser } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
+import { CoverArt } from './ui';
 
 export default function GoldEarlyAccess() {
   const router = useRouter();
@@ -64,9 +65,12 @@ export default function GoldEarlyAccess() {
             key={song.id}
             className="bg-black p-4 rounded-lg flex flex-col items-center justify-center hover:bg-gray-800 transition cursor-pointer"
           >
-            <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">
-              {song.cover || '💿'}
-            </div>
+            <CoverArt
+              cover={song.cover}
+              fallback="💿"
+              alt={song.title}
+              className="w-16 h-16 bg-yellow-500 rounded-full text-2xl mb-3 shadow-inner"
+            />
             <p className="text-sm font-bold text-center truncate w-full">{song.title}</p>
             <p className="text-xs text-yellow-500">{t('home.newRelease')}</p>
           </div>
