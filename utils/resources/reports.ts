@@ -6,7 +6,7 @@
 // off so the mock dashboards keep rendering their localStorage-derived
 // numbers unchanged.
 import { apiEnabled, apiFetch } from '../api';
-import { getItem } from '../localStorage';
+import { getItem, updateRecord } from '../localStorage';
 import { getCurrentUser } from '../auth';
 import { Payout, RevenueData, Song, User } from '../types';
 import { fetchAll, mediaUrl } from './http';
@@ -112,9 +112,11 @@ interface BackendPayout {
   status: 'paid' | 'pending';
 }
 
-export async function loadPayouts(): Promise<Payout[]> {
+// `period` is a YYYY-MM string; omitted means every period the backend has.
+export async function loadPayouts(period?: string): Promise<Payout[]> {
   if (!apiEnabled) return getItem('payouts') || [];
-  const rows = await fetchAll<BackendPayout>('/reports/payouts/');
+  const query = period ? `?period=${encodeURIComponent(period)}` : '';
+  const rows = await fetchAll<BackendPayout>(`/reports/payouts/${query}`);
   return rows.map((r) => ({
     id: r.id,
     artistId: r.artistId,
@@ -124,6 +126,44 @@ export async function loadPayouts(): Promise<Payout[]> {
     amount: Number(r.amount),
     status: r.status,
   }));
+}
+
+// Admin-only. Returns the settled payout, or null if the backend refused —
+// the caller surfaces that rather than optimistically marking the row paid.
+export async function settlePayout(id: string): Promise<Payout | null> {
+  if (!apiEnabled) {
+    updateRecord('payouts', id, { status: 'paid' });
+    return null;
+  }
+  const row = await apiFetch<BackendPayout>(`/reports/payouts/${id}/settle/`, { method: 'POST' });
+  if (!row) return null;
+  return {
+    id: row.id,
+    artistId: row.artistId,
+    artistName: row.artistName,
+    listeners: row.listeners,
+    streams: row.streams,
+    amount: Number(row.amount),
+    status: row.status,
+  };
+}
+
+// Admin-only: (re)computes the month's payouts from the recorded PlayEvents.
+// Already-settled rows are left alone by the backend. No mock counterpart —
+// the mock store has no play history to aggregate.
+export interface GeneratePayoutsResult {
+  period: string;
+  created: number;
+  updated: number;
+  skippedSettled: number;
+}
+
+export async function generatePayouts(period?: string): Promise<GeneratePayoutsResult | null> {
+  if (!apiEnabled) return null;
+  return apiFetch<GeneratePayoutsResult>('/reports/payouts/generate/', {
+    method: 'POST',
+    body: { period: period || null },
+  });
 }
 
 // ---- Admin overview (revenue series for the chart) ---------------------

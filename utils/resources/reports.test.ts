@@ -130,3 +130,89 @@ describe('reports resource — API mode', () => {
     ]);
   });
 });
+
+describe('payout actions — API mode', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env.NEXT_PUBLIC_API_URL = 'http://backend.test/api';
+  });
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_API_URL;
+    vi.restoreAllMocks();
+  });
+
+  it('loadPayouts filters by period when one is given', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ count: 0, next: null, previous: null, results: [] }),
+      })
+    );
+    const { loadPayouts } = await import('./reports');
+    await loadPayouts('2026-08');
+    expect((globalThis.fetch as any).mock.calls[0][0]).toBe(
+      'http://backend.test/api/reports/payouts/?period=2026-08'
+    );
+  });
+
+  it('settlePayout posts to the settle action and maps the row back', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: 'po1', artistId: 'a1', artistName: 'Nova Ray',
+          listeners: 3, streams: 9, amount: '12.50', status: 'paid',
+        }),
+      })
+    );
+    const { settlePayout } = await import('./reports');
+    const settled = await settlePayout('po1');
+    const [url, init] = (globalThis.fetch as any).mock.calls[0];
+    expect(url).toBe('http://backend.test/api/reports/payouts/po1/settle/');
+    expect(init.method).toBe('POST');
+    expect(settled).toMatchObject({ id: 'po1', amount: 12.5, status: 'paid' });
+  });
+
+  it('generatePayouts sends the period the admin picked', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ period: '2026-08-01', created: 1, updated: 0, skippedSettled: 0 }),
+      })
+    );
+    const { generatePayouts } = await import('./reports');
+    const result = await generatePayouts('2026-08');
+    expect(JSON.parse((globalThis.fetch as any).mock.calls[0][1].body)).toEqual({
+      period: '2026-08',
+    });
+    expect(result).toMatchObject({ created: 1 });
+  });
+});
+
+describe('payout actions — mock fallback', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    delete process.env.NEXT_PUBLIC_API_URL;
+  });
+  afterEach(() => vi.doUnmock('../localStorage'));
+
+  it('settlePayout marks the mock record paid instead of calling the API', async () => {
+    const updateRecord = vi.fn();
+    vi.doMock('../localStorage', () => ({ getItem: () => [], updateRecord }));
+    const { settlePayout } = await import('./reports');
+    await settlePayout('po1');
+    expect(updateRecord).toHaveBeenCalledWith('payouts', 'po1', { status: 'paid' });
+  });
+
+  it('generatePayouts is a no-op with no play history to aggregate', async () => {
+    vi.doMock('../localStorage', () => ({ getItem: () => [], updateRecord: vi.fn() }));
+    const { generatePayouts } = await import('./reports');
+    expect(await generatePayouts('2026-08')).toBeNull();
+  });
+});
