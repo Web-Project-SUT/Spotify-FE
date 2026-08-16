@@ -170,9 +170,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         return mapped;
       }
-      // Backend rejected the login or is unreachable: fall through to the
-      // mock path below so a stopped backend degrades the demo rather than
-      // bricking it entirely.
+      // The backend rejected these credentials. Do NOT fall through to the
+      // mock path: the seeded mock users carry no `password`, so the lookup
+      // below matches on email alone and would hand out a session (admin
+      // included) to anyone who typed a valid demo address.
+      return null;
     }
 
     const users: User[] = getItem('users') || [];
