@@ -34,6 +34,7 @@ export interface Song {
   id: string;
   title: string;
   artistId: string;
+  albumId?: string; // set when the track belongs to one of the artist's albums
   cover: string;
   plays: number;
   lyrics?: string;

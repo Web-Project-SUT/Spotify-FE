@@ -115,10 +115,10 @@ export const initializeMockDatabase = (): void => {
 
   if (!getItem('songs')) {
     setItem('songs', [
-      { id: 'song1', title: 'Neon Skyline', artistId: 'a1', cover: '🎵', plays: 154000, genre: 'Synth-pop', year: 2024, streamCount: 154000, listenerCount: 42000, earnings: 1240, lyrics: 'City lights, neon skyline...', audioUrlHigh: '/audio/neon-skyline-hi.mp3', audioUrlLow: '/audio/neon-skyline-lo.mp3' },
-      { id: 'song2', title: 'Glass Horizon', artistId: 'a1', cover: '🎵', plays: 98000, genre: 'Synth-pop', year: 2023, streamCount: 98000, listenerCount: 31000, earnings: 860, audioUrlHigh: '/audio/glass-horizon-hi.mp3', audioUrlLow: '/audio/glass-horizon-lo.mp3' },
-      { id: 'song3', title: 'Slow Drift', artistId: 'a2', cover: '🎵', plays: 64000, genre: 'Ambient', year: 2024, streamCount: 64000, listenerCount: 18000, earnings: 410, audioUrlHigh: '/audio/slow-drift-hi.mp3', audioUrlLow: '/audio/slow-drift-lo.mp3' },
-      { id: 'song4', title: 'Static Fields', artistId: 'a2', cover: '🎵', plays: 41000, genre: 'Ambient', year: 2022, streamCount: 41000, listenerCount: 12000, earnings: 220, audioUrlHigh: '/audio/static-fields-hi.mp3', audioUrlLow: '/audio/static-fields-lo.mp3' },
+      { id: 'song1', title: 'Neon Skyline', artistId: 'a1', albumId: 'album1', cover: '🎵', plays: 154000, genre: 'Synth-pop', year: 2024, streamCount: 154000, listenerCount: 42000, earnings: 1240, lyrics: 'City lights, neon skyline...', audioUrlHigh: '/audio/neon-skyline-hi.mp3', audioUrlLow: '/audio/neon-skyline-lo.mp3' },
+      { id: 'song2', title: 'Glass Horizon', artistId: 'a1', albumId: 'album1', cover: '🎵', plays: 98000, genre: 'Synth-pop', year: 2023, streamCount: 98000, listenerCount: 31000, earnings: 860, audioUrlHigh: '/audio/glass-horizon-hi.mp3', audioUrlLow: '/audio/glass-horizon-lo.mp3' },
+      { id: 'song3', title: 'Slow Drift', artistId: 'a2', albumId: 'album2', cover: '🎵', plays: 64000, genre: 'Ambient', year: 2024, streamCount: 64000, listenerCount: 18000, earnings: 410, audioUrlHigh: '/audio/slow-drift-hi.mp3', audioUrlLow: '/audio/slow-drift-lo.mp3' },
+      { id: 'song4', title: 'Static Fields', artistId: 'a2', albumId: 'album2', cover: '🎵', plays: 41000, genre: 'Ambient', year: 2022, streamCount: 41000, listenerCount: 12000, earnings: 220, audioUrlHigh: '/audio/static-fields-hi.mp3', audioUrlLow: '/audio/static-fields-lo.mp3' },
     ]);
   }
 

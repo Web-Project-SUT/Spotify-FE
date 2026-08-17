@@ -22,9 +22,12 @@ describe('catalog mappers', () => {
       cover: null,
       audioHigh: null,
       audioLow: null,
+      collaborators: ['Echo Drift'],
     });
     expect(song).toMatchObject({
       id: 't1',
+      albumId: 'al1',
+      collaborators: ['Echo Drift'],
       title: 'Neon Skyline',
       artistId: 'a1',
       plays: 42,
@@ -58,6 +61,10 @@ describe('catalog mappers', () => {
       audioLow: null,
     });
     expect(song.year).toBe(2020);
+    // No album on the wire must not become a truthy album id downstream —
+    // the album page filters on exactly this field.
+    expect(song.albumId).toBeUndefined();
+    expect(song.collaborators).toEqual([]);
   });
 
   it('maps a backend album onto the mock Album shape', () => {

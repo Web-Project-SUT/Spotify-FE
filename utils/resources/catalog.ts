@@ -8,7 +8,7 @@
 // not, the loaders return the same localStorage values as before, so every
 // mock-mode test keeps passing untouched.
 import { apiEnabled, apiFetch } from '../api';
-import { getItem, deleteRecord } from '../localStorage';
+import { getItem, addRecord, updateRecord, deleteRecord } from '../localStorage';
 import { Song, Album, User } from '../types';
 import { fetchAll, mediaUrl } from './http';
 
@@ -31,6 +31,7 @@ interface BackendTrack {
   audioHigh: string | null;
   audioLow: string | null;
   lyrics?: string | null;
+  collaborators?: string[];
 }
 
 interface BackendAlbum {
@@ -65,6 +66,8 @@ export function mapTrack(t: BackendTrack): Song {
     genre: t.genre ?? undefined,
     year: yearFrom(t.releaseYear, t.releasedAt),
     releaseType: t.releaseType,
+    albumId: t.album ?? undefined,
+    collaborators: t.collaborators ?? [],
     lyrics: t.lyrics ?? undefined,
     audioUrlHigh: mediaUrl(t.audioHigh),
     audioUrlLow: mediaUrl(t.audioLow),
@@ -192,6 +195,7 @@ export interface NewTrackInput {
   lyrics?: string;
   releaseType: 'single' | 'album_track';
   collaborators: string[];
+  albumId?: string | null;
 }
 
 // Create a track's metadata row (POST /tracks/, approved-artists only) and
@@ -208,7 +212,108 @@ export async function createTrack(input: NewTrackInput): Promise<string | null> 
       releaseType: input.releaseType,
       lyrics: input.lyrics || '',
       collaborators: input.collaborators,
+      album: input.albumId || null,
     },
   });
   return created?.id ?? null;
+}
+
+// Patch an existing track's metadata (PATCH /tracks/{id}/, owner only). The
+// artist edit form sends only the fields it changed; `album: null` detaches a
+// track from its album. Returns the updated track, or null when the backend
+// refused — the caller shows that rather than pretending the edit landed.
+export interface TrackPatchInput {
+  title?: string;
+  genre?: string;
+  year?: number | null;
+  lyrics?: string;
+  releaseType?: 'single' | 'album_track';
+  collaborators?: string[];
+  albumId?: string | null;
+}
+
+export async function updateTrack(id: string, input: TrackPatchInput): Promise<Song | null> {
+  if (!apiEnabled) {
+    updateRecord('songs', id, {
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.genre !== undefined && { genre: input.genre }),
+      ...(input.year !== undefined && { year: input.year ?? undefined }),
+      ...(input.lyrics !== undefined && { lyrics: input.lyrics }),
+      ...(input.releaseType !== undefined && { releaseType: input.releaseType }),
+      ...(input.collaborators !== undefined && { collaborators: input.collaborators }),
+      ...(input.albumId !== undefined && { albumId: input.albumId ?? undefined }),
+    });
+    return null;
+  }
+  const body: Record<string, unknown> = {};
+  if (input.title !== undefined) body.title = input.title;
+  if (input.genre !== undefined) body.genre = input.genre;
+  if (input.year !== undefined) body.releaseYear = input.year;
+  if (input.lyrics !== undefined) body.lyrics = input.lyrics;
+  if (input.releaseType !== undefined) body.releaseType = input.releaseType;
+  if (input.collaborators !== undefined) body.collaborators = input.collaborators;
+  if (input.albumId !== undefined) body.album = input.albumId;
+  const updated = await apiFetch<BackendTrack>(`/tracks/${id}/`, { method: 'PATCH', body });
+  return updated ? mapTrack(updated) : null;
+}
+
+// ---- Albums the signed-in artist owns -----------------------------------
+
+// The artist panel's album list. API mode asks the backend for just this
+// artist's albums (`?artist=`) rather than paging the whole catalog and
+// filtering in JS; mock mode filters the seeded local store the same way.
+export async function loadMyAlbums(artistId: string): Promise<Album[]> {
+  if (!apiEnabled) {
+    const albums: Album[] = getItem('albums') || [];
+    return albums.filter((a) => a.artistId === artistId);
+  }
+  const albums = await fetchAll<BackendAlbum>(`/albums/?artist=${encodeURIComponent(artistId)}`);
+  return albums.map(mapAlbum);
+}
+
+export interface AlbumInput {
+  title: string;
+  releaseYear?: number;
+}
+
+// Create an album (POST /albums/, approved-artists only). Returns the created
+// album so the caller can PUT a cover to it; null when the backend refused.
+// Mock mode writes an equivalent row into localStorage and returns it.
+export async function createAlbum(input: AlbumInput, artistId: string): Promise<Album | null> {
+  if (!apiEnabled) {
+    const album: Album = {
+      id: Date.now().toString(),
+      title: input.title,
+      artistId,
+      cover: '💿',
+      releaseYear: input.releaseYear,
+    };
+    addRecord('albums', album);
+    return album;
+  }
+  const created = await apiFetch<BackendAlbum>('/albums/', {
+    method: 'POST',
+    body: { title: input.title, releaseYear: input.releaseYear ?? null },
+  });
+  return created ? mapAlbum(created) : null;
+}
+
+export async function updateAlbum(id: string, input: AlbumInput): Promise<Album | null> {
+  if (!apiEnabled) {
+    updateRecord('albums', id, { title: input.title, releaseYear: input.releaseYear });
+    return null;
+  }
+  const updated = await apiFetch<BackendAlbum>(`/albums/${id}/`, {
+    method: 'PATCH',
+    body: { title: input.title, releaseYear: input.releaseYear ?? null },
+  });
+  return updated ? mapAlbum(updated) : null;
+}
+
+export async function deleteAlbum(id: string): Promise<void> {
+  if (apiEnabled) {
+    await apiFetch(`/albums/${id}/`, { method: 'DELETE' });
+    return;
+  }
+  deleteRecord('albums', id);
 }
