@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Button, Input } from '../../components/ui';
 import { getRoleHome, EMAIL_RE } from '../../utils/auth';
 import { getItem } from '../../utils/localStorage';
+import { apiEnabled, ApiError } from '../../utils/api';
 import { Gender, User } from '../../utils/types';
 
 type Mode = 'listener' | 'artist';
@@ -21,6 +22,29 @@ interface ListenerFieldErrors {
   acceptPolicy?: string;
 }
 
+interface ArtistFieldErrors {
+  email?: string;
+  password?: string;
+  stageName?: string;
+  portfolio?: string;
+}
+
+// The backend's normalized error body carries per-field messages under
+// `fields`, already camelCased by the API's renderer — so its keys line up
+// with the form's own field names. Flatten each field's messages into one
+// string for the matching <Input error=…>.
+function fieldErrorsFrom<T extends object>(error: ApiError, known: (keyof T)[]): T {
+  const errors = {} as T;
+  Object.entries(error.fields || {}).forEach(([field, messages]) => {
+    if ((known as string[]).includes(field)) {
+      errors[field as keyof T] = (
+        Array.isArray(messages) ? messages.join(' ') : String(messages)
+      ) as T[keyof T];
+    }
+  });
+  return errors;
+}
+
 export default function RegisterPage() {
   const { registerListener, registerArtist, user, loading } = useAuth();
   const router = useRouter();
@@ -29,6 +53,9 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<ListenerFieldErrors>({});
   const [showPolicy, setShowPolicy] = useState(false);
   const [artistSubmitted, setArtistSubmitted] = useState(false);
+  const [artistFieldErrors, setArtistFieldErrors] = useState<ArtistFieldErrors>({});
+  const [listenerError, setListenerError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -68,7 +95,11 @@ export default function RegisterPage() {
       errors.email = 'Email is required.';
     } else if (!EMAIL_RE.test(form.email)) {
       errors.email = 'Enter a valid email address.';
-    } else {
+    } else if (!apiEnabled) {
+      // Only the mock store can be checked client-side. With the backend on,
+      // `users` holds seed data rather than real accounts, so this lookup
+      // both missed real duplicates and could reject free addresses — the
+      // 400 from the server is the authoritative answer.
       const users: User[] = getItem('users') || [];
       if (users.some((u) => u.email === form.email)) {
         errors.email = 'An account with this email already exists.';
@@ -96,27 +127,74 @@ export default function RegisterPage() {
 
   const handleListenerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setListenerError('');
     const errors = validateListener();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    await registerListener({
+    setSubmitting(true);
+    const { user: created, error: failure } = await registerListener({
       displayName: form.displayName,
       email: form.email,
       password: form.password,
       birthDate: form.birthDate,
       gender: form.gender as Gender,
     });
+    setSubmitting(false);
+
+    // Only navigate on an account that actually exists server-side.
+    if (!created) {
+      const fields = failure
+        ? fieldErrorsFrom<ListenerFieldErrors>(failure, [
+            'displayName',
+            'email',
+            'password',
+            'birthDate',
+            'gender',
+          ])
+        : {};
+      setFieldErrors(fields);
+      setListenerError(
+        Object.keys(fields).length > 0
+          ? ''
+          : failure?.detail || 'Could not create your account. Please try again.'
+      );
+      return;
+    }
     router.push('/home');
   };
 
   const handleArtistSubmit = async () => {
     setError('');
+    setArtistFieldErrors({});
     if (!artistForm.email || !artistForm.password || !artistForm.stageName) {
       setError('Email, password, and stage name are required.');
       return;
     }
-    await registerArtist(artistForm);
+    setSubmitting(true);
+    const { user: created, error: failure } = await registerArtist(artistForm);
+    setSubmitting(false);
+
+    // "Application pending" is only true if the application reached the
+    // backend — showing it on a rejected request left the applicant waiting
+    // on a review queue they were never in.
+    if (!created) {
+      const fields = failure
+        ? fieldErrorsFrom<ArtistFieldErrors>(failure, [
+            'email',
+            'password',
+            'stageName',
+            'portfolio',
+          ])
+        : {};
+      setArtistFieldErrors(fields);
+      setError(
+        Object.keys(fields).length > 0
+          ? 'Please fix the highlighted fields.'
+          : failure?.detail || 'Could not submit your application. Please try again.'
+      );
+      return;
+    }
     setArtistSubmitted(true);
   };
 
@@ -158,6 +236,9 @@ export default function RegisterPage() {
         </div>
 
         {mode === 'artist' && error && <p className="text-danger text-sm text-center">{error}</p>}
+        {mode === 'listener' && listenerError && (
+          <p className="text-danger text-sm text-center">{listenerError}</p>
+        )}
 
         {mode === 'listener' ? (
           <form onSubmit={(e) => void handleListenerSubmit(e)} className="space-y-3" noValidate>
@@ -252,18 +333,18 @@ export default function RegisterPage() {
               </label>
               {fieldErrors.acceptPolicy && <p className="text-danger text-xs mt-1">{fieldErrors.acceptPolicy}</p>}
             </div>
-            <Button type="submit" className="w-full">
-              Create account
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? 'Creating account…' : 'Create account'}
             </Button>
           </form>
         ) : (
           <div className="space-y-3">
-            <Input label="Email" name="artist-email" type="email" value={artistForm.email} onChange={(e) => setArtistForm({ ...artistForm, email: e.target.value })} />
-            <Input label="Password" name="artist-password" type="password" value={artistForm.password} onChange={(e) => setArtistForm({ ...artistForm, password: e.target.value })} />
-            <Input label="Stage name" name="stageName" value={artistForm.stageName} onChange={(e) => setArtistForm({ ...artistForm, stageName: e.target.value })} />
-            <Input label="Portfolio / sample works URL" name="portfolio" value={artistForm.portfolio} onChange={(e) => setArtistForm({ ...artistForm, portfolio: e.target.value })} />
-            <Button className="w-full" onClick={() => void handleArtistSubmit()}>
-              Submit application
+            <Input label="Email" name="artist-email" type="email" value={artistForm.email} onChange={(e) => setArtistForm({ ...artistForm, email: e.target.value })} error={artistFieldErrors.email} />
+            <Input label="Password" name="artist-password" type="password" value={artistForm.password} onChange={(e) => setArtistForm({ ...artistForm, password: e.target.value })} error={artistFieldErrors.password} />
+            <Input label="Stage name" name="stageName" value={artistForm.stageName} onChange={(e) => setArtistForm({ ...artistForm, stageName: e.target.value })} error={artistFieldErrors.stageName} />
+            <Input label="Portfolio / sample works URL" name="portfolio" value={artistForm.portfolio} onChange={(e) => setArtistForm({ ...artistForm, portfolio: e.target.value })} error={artistFieldErrors.portfolio} />
+            <Button className="w-full" onClick={() => void handleArtistSubmit()} disabled={submitting}>
+              {submitting ? 'Submitting…' : 'Submit application'}
             </Button>
           </div>
         )}

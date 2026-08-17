@@ -2,7 +2,7 @@
 'use client';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getItem, setItem, addRecord, deleteRecord, initializeMockDatabase } from '../utils/localStorage';
-import { apiFetch, apiEnabled, apiLogout, storeTokens, clearTokens } from '../utils/api';
+import { apiFetch, apiRequest, apiEnabled, apiLogout, storeTokens, clearTokens, ApiError } from '../utils/api';
 import { deleteMe } from '../utils/resources/accounts';
 import { mediaUrl } from '../utils/resources/http';
 import {
@@ -63,6 +63,10 @@ function mapBackendUser(u: BackendUser): User {
   };
 }
 
+// apiRequest only returns { data: null, error: null } when the backend is
+// disabled, which this path has already ruled out — but the types allow it.
+const unknownFailure: ApiError = { status: 0, detail: 'Registration failed. Please try again.' };
+
 interface RegisterListenerInput {
   displayName: string;
   email: string;
@@ -95,14 +99,22 @@ interface RegisterArtistInput {
   portfolio: string;
 }
 
+// Registration has three outcomes, not two: it worked, the backend said no,
+// or the backend is switched off (mock mode). Collapsing the middle case into
+// the third is what let a rejected signup render "Application pending".
+export interface RegisterResult {
+  user: User | null;
+  error: ApiError | null;
+}
+
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
   deleteAccount: () => Promise<boolean>;
-  registerListener: (input: RegisterListenerInput) => Promise<User>;
-  registerArtist: (input: RegisterArtistInput) => Promise<User>;
+  registerListener: (input: RegisterListenerInput) => Promise<RegisterResult>;
+  registerArtist: (input: RegisterArtistInput) => Promise<RegisterResult>;
   refresh: () => void;
   refreshMe: () => Promise<void>;
 }
@@ -241,13 +253,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return ok;
   }, [user, logout]);
 
-  const registerListener = useCallback(async (input: RegisterListenerInput): Promise<User> => {
+  const registerListener = useCallback(async (input: RegisterListenerInput): Promise<RegisterResult> => {
     if (apiEnabled) {
       // The listener endpoint returns tokens alongside the user, so a
       // successful registration is also a login — no separate follow-up
       // call needed. acceptedPolicy is required server-side; the register
       // form already gates submission on the user checking that box.
-      const result = await apiFetch<LoginResponse>('/auth/register/listener/', {
+      const { data, error } = await apiRequest<LoginResponse>('/auth/register/listener/', {
         method: 'POST',
         auth: false,
         body: {
@@ -259,19 +271,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           acceptedPolicy: true,
         },
       });
-      if (result) {
-        storeTokens(result.access, result.refresh);
-        const mapped = mapBackendUser(result.user);
-        setItem('currentUser', mapped);
-        setUser(mapped);
-        hydratePreferences(result.user.preferences);
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
-        }
-        return mapped;
+      // The backend is the authority when it is switched on. Falling through
+      // to the mock path here would write a phantom account only this browser
+      // can see while the caller is told the signup succeeded.
+      if (!data) return { user: null, error: error ?? unknownFailure };
+      storeTokens(data.access, data.refresh);
+      const mapped = mapBackendUser(data.user);
+      setItem('currentUser', mapped);
+      setUser(mapped);
+      hydratePreferences(data.user.preferences);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
       }
-      // Backend rejected or unreachable: fall through to the mock path so
-      // the demo still produces a usable local account.
+      return { user: mapped, error: null };
     }
 
     const existing: User[] = getItem('users') || [];
@@ -295,15 +307,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new StorageEvent('storage', { key: 'currentUser' }));
     }
-    return newUser;
+    return { user: newUser, error: null };
   }, []);
 
-  const registerArtist = useCallback(async (input: RegisterArtistInput): Promise<User> => {
+  const registerArtist = useCallback(async (input: RegisterArtistInput): Promise<RegisterResult> => {
     if (apiEnabled) {
       // Artist registration returns only the user (no tokens): the account
       // is created 'pending' and cannot log in until support/admin approves
       // it, so there is deliberately nothing to auto-login here.
-      const result = await apiFetch<{ user: BackendUser }>('/auth/register/artist/', {
+      const { data, error } = await apiRequest<{ user: BackendUser }>('/auth/register/artist/', {
         method: 'POST',
         auth: false,
         body: {
@@ -313,8 +325,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           portfolio: input.portfolio || '',
         },
       });
-      if (result) return mapBackendUser(result.user);
-      // Fall through to the mock path on failure/unreachable backend.
+      // Same reason as registerListener: a rejected application must not
+      // become a local-only artist that no reviewer will ever see.
+      if (!data) return { user: null, error: error ?? unknownFailure };
+      return { user: mapBackendUser(data.user), error: null };
     }
 
     // Artist accounts start in 'pending' until support/admin approves them.
@@ -345,7 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    return newArtist;
+    return { user: newArtist, error: null };
   }, []);
 
   return (
