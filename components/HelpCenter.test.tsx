@@ -62,9 +62,9 @@ describe('HelpCenter', () => {
   });
   afterEach(() => cleanup());
 
-  it('shows only the current user\'s tickets', () => {
+  it('shows only the current user\'s tickets', async () => {
     renderHelpCenter();
-    expect(screen.getByText('Cannot play downloaded songs')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Cannot play downloaded songs')).toBeDefined());
     expect(screen.queryByText('Different user ticket')).toBeNull();
   });
 

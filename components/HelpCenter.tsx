@@ -1,10 +1,10 @@
 // components/HelpCenter.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-import { getItem, addRecord, updateRecord } from '../utils/localStorage';
 import { getCurrentUser } from '../utils/auth';
 import { useLanguage } from '../context/LanguageContext';
-import { Ticket, User } from '../utils/types';
+import { Ticket } from '../utils/types';
+import { loadTickets, loadTicketDetail, createTicket, replyToTicket } from '../utils/resources/tickets';
 import { Badge, Button, EmptyState, Input } from './ui';
 
 export default function HelpCenter() {
@@ -19,56 +19,34 @@ export default function HelpCenter() {
 
   useEffect(() => {
     if (!currentUser) return;
-    const all: Ticket[] = getItem('tickets') || [];
-    setTickets(all.filter((ticket) => ticket.userId === currentUser.id));
+    let active = true;
+    void loadTickets(currentUser.id).then((loaded) => {
+      if (active) setTickets(loaded);
+    });
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const submitTicket = () => {
+  const submitTicket = async () => {
     if (!currentUser || !subject.trim() || !message.trim()) return;
-    const userName = currentUser.displayName || currentUser.stageName || currentUser.email;
-    const newTicket: Ticket = {
-      id: `T-${Date.now()}`,
-      userId: currentUser.id,
-      userName,
-      subject: subject.trim(),
-      date: new Date().toISOString().slice(0, 10),
-      status: 'open',
-      messages: [{ from: 'user', text: message.trim(), at: new Date().toISOString() }],
-    };
-    addRecord('tickets', newTicket);
-
-    const recipients: User[] = (getItem('users') || []).filter(
-      (u: User) => u.role === 'support' || u.role === 'admin'
-    );
-    recipients.forEach((recipient) => {
-      addRecord('notifications', {
-        id: `n-${Date.now()}-${recipient.id}`,
-        userId: recipient.id,
-        title: 'New support ticket',
-        message: `${userName} submitted: ${newTicket.subject}`,
-        type: 'support',
-        isRead: false,
-        createdAt: new Date().toISOString(),
-      });
-    });
-
-    setTickets((prev) => [...prev, newTicket]);
+    const created = await createTicket(currentUser, subject.trim(), message.trim());
+    if (!created) return;
+    setTickets((prev) => [...prev, created]);
     setSubject('');
     setMessage('');
   };
 
-  const sendFollowUp = () => {
+  const openTicketDetail = async (ticket: Ticket) => {
+    const detail = await loadTicketDetail(ticket.id);
+    setOpenTicket(detail || ticket);
+  };
+
+  const sendFollowUp = async () => {
     if (!openTicket || !reply.trim()) return;
-    const updated: Ticket = {
-      ...openTicket,
-      status: 'open',
-      messages: [
-        ...openTicket.messages,
-        { from: 'user', text: reply.trim(), at: new Date().toISOString() },
-      ],
-    };
-    updateRecord('tickets', updated.id, { status: updated.status, messages: updated.messages });
+    const updated = await replyToTicket(openTicket, reply.trim(), 'user');
+    if (!updated) return;
     setTickets((prev) => prev.map((ticket) => (ticket.id === updated.id ? updated : ticket)));
     setOpenTicket(updated);
     setReply('');
@@ -118,7 +96,7 @@ export default function HelpCenter() {
                 placeholder={t('help.replyPlaceholder')}
               />
             </div>
-            <Button onClick={sendFollowUp}>{t('help.send')}</Button>
+            <Button onClick={() => void sendFollowUp()}>{t('help.send')}</Button>
           </div>
         </div>
       ) : (
@@ -142,7 +120,7 @@ export default function HelpCenter() {
                 className="w-full bg-surface-2 border border-border rounded px-3 py-2 min-h-24 placeholder-muted focus:outline-none focus:border-white transition-colors"
               />
             </div>
-            <Button onClick={submitTicket} disabled={!subject.trim() || !message.trim()}>
+            <Button onClick={() => void submitTicket()} disabled={!subject.trim() || !message.trim()}>
               {t('help.submit')}
             </Button>
           </div>
@@ -165,7 +143,7 @@ export default function HelpCenter() {
                     <tr
                       key={ticket.id}
                       className="border-b border-border hover:bg-surface-2 cursor-pointer"
-                      onClick={() => setOpenTicket(ticket)}
+                      onClick={() => void openTicketDetail(ticket)}
                     >
                       <td className="p-2 whitespace-nowrap">{ticket.id}</td>
                       <td className="p-2 whitespace-nowrap">{ticket.subject}</td>

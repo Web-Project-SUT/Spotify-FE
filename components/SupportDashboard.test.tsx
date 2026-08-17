@@ -92,7 +92,7 @@ describe('SupportDashboard', () => {
     await waitFor(() => expect(screen.getByText(/Cannot play downloaded songs/i)).toBeDefined());
 
     fireEvent.click(screen.getByText(/Cannot play downloaded songs/i));
-    expect(screen.getByPlaceholderText(/Type a reply/i)).toBeDefined();
+    await waitFor(() => expect(screen.getByPlaceholderText(/Type a reply/i)).toBeDefined());
   });
 
   it('replying to a ticket updates it and notifies the creator', async () => {
@@ -103,7 +103,7 @@ describe('SupportDashboard', () => {
     await waitFor(() => expect(screen.getByText(/Cannot play downloaded songs/i)).toBeDefined());
     fireEvent.click(screen.getByText(/Cannot play downloaded songs/i));
 
-    const input = screen.getByPlaceholderText(/Type a reply/i);
+    const input = await screen.findByPlaceholderText(/Type a reply/i);
     fireEvent.change(input, { target: { value: 'Try clearing your cache.' } });
     fireEvent.click(screen.getByText('Send'));
 
@@ -126,7 +126,8 @@ describe('SupportDashboard', () => {
     await waitFor(() => expect(screen.getByText(/Cannot play downloaded songs/i)).toBeDefined());
     fireEvent.click(screen.getByText(/Cannot play downloaded songs/i));
 
-    fireEvent.click(screen.getByText('Close ticket'));
+    const closeButton = await screen.findByText('Close ticket');
+    fireEvent.click(closeButton);
 
     expect(ls.updateRecord).toHaveBeenCalledWith('tickets', 'T-1001', { status: 'closed' });
   });

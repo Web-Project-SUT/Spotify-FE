@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { getItem, updateRecord, addRecord } from '../utils/localStorage';
 import { User, Ticket } from '../utils/types';
+import { loadAllTickets, loadTicketDetail, replyToTicket, closeTicket } from '../utils/resources/tickets';
 import { Badge, Button, EmptyState, Input } from './ui';
 
 type Tab = 'approvals' | 'tickets';
@@ -19,7 +20,7 @@ export default function SupportDashboard() {
   useEffect(() => {
     const users: User[] = getItem('users') || [];
     setPendingArtists(users.filter((u) => u.role === 'artist' && u.status === 'pending'));
-    setTickets(getItem('tickets') || []);
+    void loadAllTickets().then(setTickets);
   }, []);
 
   const decideArtist = (artist: User, approve: boolean, reason?: string) => {
@@ -43,35 +44,24 @@ export default function SupportDashboard() {
     setRejectReason('');
   };
 
-  const sendReply = () => {
+  const openTicketDetail = async (ticket: Ticket) => {
+    const detail = await loadTicketDetail(ticket.id);
+    setOpenTicket(detail || ticket);
+  };
+
+  const sendReply = async () => {
     if (!openTicket || !reply.trim()) return;
-    const updated: Ticket = {
-      ...openTicket,
-      status: 'answered',
-      messages: [
-        ...openTicket.messages,
-        { from: 'support', text: reply.trim(), at: new Date().toISOString() },
-      ],
-    };
-    updateRecord('tickets', updated.id, { status: updated.status, messages: updated.messages });
-    addRecord('notifications', {
-      id: `n-${Date.now()}`,
-      userId: updated.userId,
-      title: 'Support replied to your ticket',
-      message: `Re: ${updated.subject}`,
-      type: 'support',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+    const updated = await replyToTicket(openTicket, reply.trim(), 'support');
+    if (!updated) return;
     setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setOpenTicket(updated);
     setReply('');
   };
 
-  const closeTicket = () => {
+  const handleCloseTicket = async () => {
     if (!openTicket) return;
-    const updated: Ticket = { ...openTicket, status: 'closed' };
-    updateRecord('tickets', updated.id, { status: 'closed' });
+    const updated = await closeTicket(openTicket);
+    if (!updated) return;
     setTickets((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
     setOpenTicket(updated);
   };
@@ -140,7 +130,7 @@ export default function SupportDashboard() {
               ← Back to tickets
             </button>
             {openTicket.status !== 'closed' && (
-              <Button variant="ghost" size="sm" onClick={closeTicket}>
+              <Button variant="ghost" size="sm" onClick={() => void handleCloseTicket()}>
                 Close ticket
               </Button>
             )}
@@ -168,7 +158,7 @@ export default function SupportDashboard() {
                 placeholder="Type a reply…"
               />
             </div>
-            <Button onClick={sendReply}>Send</Button>
+            <Button onClick={() => void sendReply()}>Send</Button>
           </div>
         </div>
       ) : (
@@ -185,7 +175,7 @@ export default function SupportDashboard() {
             </thead>
             <tbody>
               {tickets.map((ticket) => (
-                <tr key={ticket.id} className="border-b border-border hover:bg-surface-2 cursor-pointer" onClick={() => setOpenTicket(ticket)}>
+                <tr key={ticket.id} className="border-b border-border hover:bg-surface-2 cursor-pointer" onClick={() => void openTicketDetail(ticket)}>
                   <td className="p-2 whitespace-nowrap">{ticket.id}</td>
                   <td className="p-2 text-muted whitespace-nowrap">{ticket.userName}</td>
                   <td className="p-2 whitespace-nowrap">{ticket.subject}</td>
