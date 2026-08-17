@@ -9,6 +9,8 @@ import * as authUtils from '../utils/auth';
 
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
+  addRecord: vi.fn(),
+  updateRecord: vi.fn(),
   deleteRecord: vi.fn(),
   setItem: vi.fn(),
 }));
@@ -61,6 +63,46 @@ describe('ArtistStatsDashboard', () => {
 
     expect(localStorageUtils.deleteRecord).toHaveBeenCalledWith('songs', '1');
     await waitFor(() => expect(screen.queryByText('Song One')).toBeNull());
+  });
+
+  it('opens an edit form for one of the artist\'s own tracks', async () => {
+    (authUtils.getCurrentUser as any).mockReturnValue({ id: 'a1', role: 'artist' });
+    (localStorageUtils.getItem as any).mockReturnValue([
+      { id: '1', title: 'Song One', streamCount: 150, listenerCount: 80, earnings: 50, artistId: 'a1', genre: 'Jazz' },
+    ]);
+
+    renderDashboard();
+    await waitFor(() => expect(screen.getByText('Song One')).toBeDefined());
+
+    fireEvent.click(screen.getByText('Edit'));
+
+    await waitFor(() => expect(screen.getByText('Edit track')).toBeDefined());
+    expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Song One');
+    expect((screen.getByLabelText('Genre') as HTMLInputElement).value).toBe('Jazz');
+  });
+
+  it('reflects a saved title edit back into the stats row', async () => {
+    (authUtils.getCurrentUser as any).mockReturnValue({ id: 'a1', role: 'artist' });
+    (localStorageUtils.getItem as any).mockReturnValue([
+      { id: '1', title: 'Song One', streamCount: 150, listenerCount: 80, earnings: 50, artistId: 'a1' },
+    ]);
+
+    renderDashboard();
+    await waitFor(() => expect(screen.getByText('Song One')).toBeDefined());
+
+    fireEvent.click(screen.getByText('Edit'));
+    await waitFor(() => expect(screen.getByText('Edit track')).toBeDefined());
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Song One (Live)' } });
+    fireEvent.click(screen.getByText('Save changes'));
+
+    await waitFor(() => expect(screen.getByText('Song One (Live)')).toBeDefined());
+    // The form closes on save, so the stats row is what is left showing.
+    expect(screen.queryByText('Edit track')).toBeNull();
+    expect(localStorageUtils.updateRecord).toHaveBeenCalledWith(
+      'songs',
+      '1',
+      expect.objectContaining({ title: 'Song One (Live)' })
+    );
   });
 
   it('shows an empty state when the artist has no songs', async () => {
