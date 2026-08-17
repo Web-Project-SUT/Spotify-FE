@@ -7,9 +7,9 @@
 // With the backend off every function falls back to the localStorage mock
 // exactly as before, so the mock-only demo is unaffected.
 import { ApiError, apiEnabled, apiFetch, apiRequest, API_BASE_URL } from '../api';
-import { getItem, updateRecord, deleteRecord } from '../localStorage';
+import { getItem, addRecord, updateRecord, deleteRecord } from '../localStorage';
 import { Role, Tier, User } from '../types';
-import { mediaUrl } from './http';
+import { fetchAll, mediaUrl } from './http';
 
 // Always resolves (the backend returns 204 whether or not the email exists,
 // which is the correct anti-enumeration behaviour — we mirror it).
@@ -155,4 +155,94 @@ export async function deleteMe(): Promise<boolean> {
   }
   const { error } = await apiRequest('/auth/me/', { method: 'DELETE' });
   return !error;
+}
+
+// ---- Artist review (support/admin) ---------------------------------------
+
+interface BackendPendingArtist {
+  id: string;
+  stageName: string;
+  email: string;
+  portfolioUrl: string;
+  createdAt: string;
+}
+
+// The pending-artist review queue, in the shape the support dashboard's
+// table already renders (utils/types.ts User). Mock mode reads it straight
+// off the seeded users, same as before this endpoint existed.
+export async function loadPendingArtists(): Promise<User[]> {
+  if (!apiEnabled) {
+    const users: User[] = getItem('users') || [];
+    return users.filter((u) => u.role === 'artist' && u.status === 'pending');
+  }
+  const rows = await fetchAll<BackendPendingArtist>('/artists/pending/');
+  return rows.map((r) => ({
+    id: r.id,
+    email: r.email,
+    role: 'artist',
+    status: 'pending',
+    stageName: r.stageName,
+    portfolio: r.portfolioUrl,
+  }));
+}
+
+export async function approveArtist(artist: User): Promise<boolean> {
+  if (apiEnabled) {
+    const { error } = await apiRequest(`/artists/${artist.id}/approve/`, { method: 'POST' });
+    return !error;
+  }
+  updateRecord('users', artist.id, { status: 'active' });
+  addRecord('notifications', {
+    id: `n-${Date.now()}`,
+    userId: artist.id,
+    title: 'Artist account approved',
+    message: 'You can now publish your work.',
+    type: 'approval',
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  });
+  return true;
+}
+
+export async function rejectArtist(artist: User, reason: string): Promise<boolean> {
+  if (apiEnabled) {
+    const { error } = await apiRequest(`/artists/${artist.id}/reject/`, {
+      method: 'POST',
+      body: { reason },
+    });
+    return !error;
+  }
+  updateRecord('users', artist.id, { status: 'rejected' });
+  addRecord('notifications', {
+    id: `n-${Date.now()}`,
+    userId: artist.id,
+    title: 'Artist application rejected',
+    message: `Reason: ${reason || 'Did not meet requirements'}`,
+    type: 'approval',
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  });
+  return true;
+}
+
+export interface SampleWork {
+  id: string;
+  title: string;
+  fileUrl?: string;
+}
+
+interface BackendSampleWork {
+  id: string;
+  title: string;
+  file: string | null;
+}
+
+// Support-gated (GET /artists/{id}/sample-works/), so the review queue can
+// judge submitted work directly rather than trusting an artist-supplied
+// portfolio link. No mock-mode backing store — an offline demo shows no
+// samples, same as it showed no portfolio-verification before.
+export async function loadArtistSampleWorks(artistId: string): Promise<SampleWork[]> {
+  if (!apiEnabled) return [];
+  const rows = await fetchAll<BackendSampleWork>(`/artists/${artistId}/sample-works/`);
+  return rows.map((r) => ({ id: r.id, title: r.title, fileUrl: mediaUrl(r.file) }));
 }

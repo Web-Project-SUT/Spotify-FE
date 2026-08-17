@@ -84,6 +84,15 @@ describe('SupportDashboard', () => {
     await waitFor(() => expect(screen.queryByText('New Wave')).toBeNull());
   });
 
+  it('shows "no sample works" for a pending artist with none submitted (mock mode)', async () => {
+    renderDashboard();
+    await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());
+
+    fireEvent.click(screen.getByText('View sample works'));
+
+    await waitFor(() => expect(screen.getByText('No sample works submitted.')).toBeDefined());
+  });
+
   it('switches to the tickets tab and opens a ticket thread', async () => {
     renderDashboard();
     await waitFor(() => expect(screen.getByText('New Wave')).toBeDefined());

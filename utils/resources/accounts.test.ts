@@ -68,6 +68,55 @@ describe('accounts resource — mock mode', () => {
     expect(deleteRecord).toHaveBeenCalledWith('users', 'u1');
     vi.doUnmock('../localStorage');
   });
+
+  it('loadPendingArtists filters the seeded users to pending artists', async () => {
+    vi.doMock('../localStorage', () => ({
+      getItem: (key: string) =>
+        key === 'users'
+          ? [
+              { id: 'a1', role: 'artist', status: 'pending', stageName: 'New Wave' },
+              { id: 'a2', role: 'artist', status: 'active', stageName: 'Nova' },
+              { id: 'u1', role: 'listener', status: 'active' },
+            ]
+          : [],
+    }));
+    const { loadPendingArtists } = await import('./accounts');
+    const pending = await loadPendingArtists();
+    expect(pending.map((a) => a.id)).toEqual(['a1']);
+    vi.doUnmock('../localStorage');
+  });
+
+  it('approveArtist activates the user and notifies them', async () => {
+    const updateRecord = vi.fn();
+    const addRecord = vi.fn();
+    vi.doMock('../localStorage', () => ({ getItem: () => [], updateRecord, addRecord }));
+    const { approveArtist } = await import('./accounts');
+    const artist = { id: 'a1', role: 'artist', email: 'a1@demo.com' } as any;
+    expect(await approveArtist(artist)).toBe(true);
+    expect(updateRecord).toHaveBeenCalledWith('users', 'a1', { status: 'active' });
+    expect(addRecord).toHaveBeenCalledWith('notifications', expect.objectContaining({ userId: 'a1', type: 'approval' }));
+    vi.doUnmock('../localStorage');
+  });
+
+  it('rejectArtist marks the user rejected and includes the reason', async () => {
+    const updateRecord = vi.fn();
+    const addRecord = vi.fn();
+    vi.doMock('../localStorage', () => ({ getItem: () => [], updateRecord, addRecord }));
+    const { rejectArtist } = await import('./accounts');
+    const artist = { id: 'a1', role: 'artist', email: 'a1@demo.com' } as any;
+    expect(await rejectArtist(artist, 'Low quality samples')).toBe(true);
+    expect(updateRecord).toHaveBeenCalledWith('users', 'a1', { status: 'rejected' });
+    expect(addRecord).toHaveBeenCalledWith(
+      'notifications',
+      expect.objectContaining({ userId: 'a1', type: 'approval', message: expect.stringContaining('Low quality samples') })
+    );
+    vi.doUnmock('../localStorage');
+  });
+
+  it('loadArtistSampleWorks returns nothing without a backend', async () => {
+    const { loadArtistSampleWorks } = await import('./accounts');
+    expect(await loadArtistSampleWorks('a1')).toEqual([]);
+  });
 });
 
 describe('accounts resource — API mode', () => {
@@ -162,5 +211,72 @@ describe('accounts resource — API mode', () => {
     const bad = await mod.confirmPasswordReset('u', 'bad', 'password123');
     expect(bad.ok).toBe(false);
     expect(bad.error).toBeTruthy();
+  });
+
+  it('loadPendingArtists reads /artists/pending/ and maps into the User shape', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          count: 1,
+          next: null,
+          previous: null,
+          results: [
+            { id: 'a1', stageName: 'New Wave', email: 'a1@demo.com', portfolioUrl: 'http://x.com', createdAt: '2026-01-01' },
+          ],
+        }),
+      })
+    );
+    const { loadPendingArtists } = await import('./accounts');
+    const pending = await loadPendingArtists();
+    expect(pending).toEqual([
+      { id: 'a1', email: 'a1@demo.com', role: 'artist', status: 'pending', stageName: 'New Wave', portfolio: 'http://x.com' },
+    ]);
+  });
+
+  it('approveArtist POSTs to /artists/{id}/approve/', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+    const { approveArtist } = await import('./accounts');
+    const artist = { id: 'a1' } as any;
+    expect(await approveArtist(artist)).toBe(true);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://backend.test/api/artists/a1/approve/');
+    expect(opts.method).toBe('POST');
+  });
+
+  it('rejectArtist POSTs { reason } to /artists/{id}/reject/', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+    const { rejectArtist } = await import('./accounts');
+    const artist = { id: 'a1' } as any;
+    expect(await rejectArtist(artist, 'Low quality samples')).toBe(true);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://backend.test/api/artists/a1/reject/');
+    expect(opts.method).toBe('POST');
+    expect(JSON.parse(opts.body)).toEqual({ reason: 'Low quality samples' });
+  });
+
+  it('loadArtistSampleWorks maps file paths into absolute URLs', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          count: 1,
+          next: null,
+          previous: null,
+          results: [{ id: 'sw1', title: 'Demo track', file: '/media/samples/demo.mp3' }],
+        }),
+      })
+    );
+    const { loadArtistSampleWorks } = await import('./accounts');
+    const works = await loadArtistSampleWorks('a1');
+    expect(works).toEqual([
+      { id: 'sw1', title: 'Demo track', fileUrl: 'http://backend.test/media/samples/demo.mp3' },
+    ]);
   });
 });

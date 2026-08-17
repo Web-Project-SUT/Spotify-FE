@@ -1,8 +1,14 @@
 // components/SupportDashboard.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
-import { getItem, updateRecord, addRecord } from '../utils/localStorage';
 import { User, Ticket } from '../utils/types';
+import {
+  loadPendingArtists,
+  approveArtist,
+  rejectArtist,
+  loadArtistSampleWorks,
+  SampleWork,
+} from '../utils/resources/accounts';
 import { loadAllTickets, loadTicketDetail, replyToTicket, closeTicket } from '../utils/resources/tickets';
 import { Badge, Button, EmptyState, Input } from './ui';
 
@@ -16,32 +22,30 @@ export default function SupportDashboard() {
   const [reply, setReply] = useState('');
   const [rejectTarget, setRejectTarget] = useState<User | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [sampleWorksTarget, setSampleWorksTarget] = useState<User | null>(null);
+  const [sampleWorks, setSampleWorks] = useState<SampleWork[]>([]);
 
   useEffect(() => {
-    const users: User[] = getItem('users') || [];
-    setPendingArtists(users.filter((u) => u.role === 'artist' && u.status === 'pending'));
+    void loadPendingArtists().then(setPendingArtists);
     void loadAllTickets().then(setTickets);
   }, []);
 
-  const decideArtist = (artist: User, approve: boolean, reason?: string) => {
-    updateRecord('users', artist.id, { status: approve ? 'active' : 'rejected' });
-    addRecord('notifications', {
-      id: `n-${Date.now()}`,
-      userId: artist.id,
-      title: approve ? 'Artist account approved' : 'Artist application rejected',
-      message: approve ? 'You can now publish your work.' : `Reason: ${reason || 'Did not meet requirements'}`,
-      type: 'approval',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+  const decideArtist = async (artist: User, approve: boolean, reason?: string) => {
+    const ok = approve ? await approveArtist(artist) : await rejectArtist(artist, reason || '');
+    if (!ok) return;
     setPendingArtists((prev) => prev.filter((a) => a.id !== artist.id));
   };
 
-  const confirmReject = () => {
+  const confirmReject = async () => {
     if (!rejectTarget) return;
-    decideArtist(rejectTarget, false, rejectReason);
+    await decideArtist(rejectTarget, false, rejectReason);
     setRejectTarget(null);
     setRejectReason('');
+  };
+
+  const viewSampleWorks = async (artist: User) => {
+    setSampleWorksTarget(artist);
+    setSampleWorks(await loadArtistSampleWorks(artist.id));
   };
 
   const openTicketDetail = async (ticket: Ticket) => {
@@ -95,7 +99,7 @@ export default function SupportDashboard() {
                 <tr className="border-b border-border text-muted text-sm">
                   <th className="p-2">Stage name</th>
                   <th className="p-2">Email</th>
-                  <th className="p-2">Portfolio</th>
+                  <th className="p-2">Sample works</th>
                   <th className="p-2">Decision</th>
                 </tr>
               </thead>
@@ -105,16 +109,12 @@ export default function SupportDashboard() {
                     <td className="p-2 font-bold whitespace-nowrap">{a.stageName}</td>
                     <td className="p-2 text-muted whitespace-nowrap">{a.email}</td>
                     <td className="p-2 whitespace-nowrap">
-                      {a.portfolio ? (
-                        <a href={a.portfolio} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                          View samples
-                        </a>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
+                      <button onClick={() => void viewSampleWorks(a)} className="text-accent hover:underline">
+                        View sample works
+                      </button>
                     </td>
                     <td className="p-2 flex gap-2 whitespace-nowrap">
-                      <Button size="sm" onClick={() => decideArtist(a, true)}>Approve</Button>
+                      <Button size="sm" onClick={() => void decideArtist(a, true)}>Approve</Button>
                       <Button size="sm" variant="danger" onClick={() => setRejectTarget(a)}>Reject</Button>
                     </td>
                   </tr>
@@ -211,8 +211,40 @@ export default function SupportDashboard() {
               >
                 Cancel
               </Button>
-              <Button variant="danger" onClick={confirmReject}>
+              <Button variant="danger" onClick={() => void confirmReject()}>
                 Confirm rejection
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sampleWorksTarget && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface border border-border rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-lg font-bold mb-4">
+              Sample works · {sampleWorksTarget.stageName}
+            </h2>
+            {sampleWorks.length === 0 ? (
+              <p className="text-muted text-sm mb-4">No sample works submitted.</p>
+            ) : (
+              <ul className="space-y-2 mb-4">
+                {sampleWorks.map((w) => (
+                  <li key={w.id}>
+                    {w.fileUrl ? (
+                      <a href={w.fileUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                        {w.title}
+                      </a>
+                    ) : (
+                      <span className="text-muted">{w.title}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={() => setSampleWorksTarget(null)}>
+                Close
               </Button>
             </div>
           </div>
