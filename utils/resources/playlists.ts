@@ -10,7 +10,7 @@
 // Every function mirrors the change into the mock localStorage store when
 // the backend is disabled, so the offline demo and the existing tests keep
 // working with no code path changes.
-import { apiFetch, apiEnabled } from '../api';
+import { apiFetch, apiRequest, apiEnabled } from '../api';
 import { getItem, addRecord, deleteRecord, updateRecord } from '../localStorage';
 import { Playlist } from '../types';
 import { fetchAll } from './http';
@@ -23,6 +23,7 @@ interface BackendPlaylistListItem {
   cover: string | null;
   createdAt: string;
   trackCount: number;
+  trackIds: string[];
   lastPlayedAt: string | null;
 }
 
@@ -39,14 +40,12 @@ interface BackendPlaylistDetail extends Omit<BackendPlaylistListItem, 'trackCoun
 }
 
 function mapListItem(p: BackendPlaylistListItem): Playlist {
-  // songIds is intentionally empty in the list projection — the backend
-  // list endpoint returns only a count. The detail loader fills real ids.
   return {
     id: p.id,
     userId: p.owner,
     title: p.title,
     isPublic: p.isPublic,
-    songIds: [],
+    songIds: p.trackIds ?? [],
     // Derived server-side from the playlist's PlayEvents; null until the
     // playlist has actually been played.
     lastPlayedAt: p.lastPlayedAt ?? undefined,
@@ -121,25 +120,28 @@ export async function deletePlaylist(id: string): Promise<void> {
   deleteRecord('playlists', id);
 }
 
-export async function addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
+export async function addTrackToPlaylist(playlistId: string, trackId: string): Promise<boolean> {
   if (apiEnabled) {
-    await apiFetch(`/playlists/${playlistId}/tracks/`, {
+    const { error } = await apiRequest(`/playlists/${playlistId}/tracks/`, {
       method: 'POST',
       body: { track: trackId },
     });
-    return;
+    return !error;
   }
   const all: Playlist[] = getItem('playlists') || [];
   const current = all.find((p) => p.id === playlistId);
   if (current && !current.songIds.includes(trackId)) {
     updateRecord('playlists', playlistId, { songIds: [...current.songIds, trackId] });
   }
+  return true;
 }
 
-export async function removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
+export async function removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<boolean> {
   if (apiEnabled) {
-    await apiFetch(`/playlists/${playlistId}/tracks/${trackId}/`, { method: 'DELETE' });
-    return;
+    const { error } = await apiRequest(`/playlists/${playlistId}/tracks/${trackId}/`, {
+      method: 'DELETE',
+    });
+    return !error;
   }
   const all: Playlist[] = getItem('playlists') || [];
   const current = all.find((p) => p.id === playlistId);
@@ -148,4 +150,5 @@ export async function removeTrackFromPlaylist(playlistId: string, trackId: strin
       songIds: current.songIds.filter((id) => id !== trackId),
     });
   }
+  return true;
 }

@@ -49,11 +49,20 @@ export default function AddToPlaylistMenu({ songId }: AddToPlaylistMenuProps) {
     const songIds = inPlaylist
       ? playlist.songIds.filter((id) => id !== songId)
       : [...playlist.songIds, songId];
-    // Optimistic UI, then persist through the resource (real API or mock).
+    // Optimistic UI, then persist through the resource (real API or mock);
+    // revert on failure so a rejected write (e.g. a stale duplicate add)
+    // doesn't leave the menu claiming a membership change that didn't happen.
     setPlaylists((prev) => prev.map((p) => (p.id === playlist.id ? { ...p, songIds } : p)));
     void (inPlaylist
       ? removeTrackFromPlaylist(playlist.id, songId)
-      : addTrackToPlaylist(playlist.id, songId));
+      : addTrackToPlaylist(playlist.id, songId)
+    ).then((ok) => {
+      if (!ok) {
+        setPlaylists((prev) =>
+          prev.map((p) => (p.id === playlist.id ? { ...p, songIds: playlist.songIds } : p))
+        );
+      }
+    });
   };
 
   return (

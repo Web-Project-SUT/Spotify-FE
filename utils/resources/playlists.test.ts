@@ -115,16 +115,64 @@ describe('playlists resource — API mode', () => {
     vi.doUnmock('../localStorage');
   });
 
-  it('addTrackToPlaylist sends { track } to the tracks endpoint', async () => {
+  it('addTrackToPlaylist sends { track } to the tracks endpoint and reports success', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) });
     vi.stubGlobal('fetch', fetchMock);
     const { addTrackToPlaylist } = await import('./playlists');
-    await addTrackToPlaylist('p1', 't9');
+    const ok = await addTrackToPlaylist('p1', 't9');
 
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toBe('http://backend.test/api/playlists/p1/tracks/');
     expect(opts.method).toBe('POST');
     expect(JSON.parse(opts.body)).toEqual({ track: 't9' });
+    expect(ok).toBe(true);
+  });
+
+  it('addTrackToPlaylist reports failure (not a thrown/swallowed error) on a 400', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => ({ detail: 'Track already added.', code: 'track_already_added' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { addTrackToPlaylist } = await import('./playlists');
+    expect(await addTrackToPlaylist('p1', 't9')).toBe(false);
+  });
+
+  it('removeTrackFromPlaylist DELETEs the track and reports success', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+    const { removeTrackFromPlaylist } = await import('./playlists');
+    const ok = await removeTrackFromPlaylist('p1', 't9');
+
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://backend.test/api/playlists/p1/tracks/t9/');
+    expect(opts.method).toBe('DELETE');
+    expect(ok).toBe(true);
+  });
+
+  it('loadPlaylists maps trackIds into songIds so membership survives a reload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          {
+            id: 'p1', owner: 'u1', title: 'Mine', isPublic: false, cover: null,
+            createdAt: '2026-01-01', trackCount: 2, trackIds: ['t1', 't2'], lastPlayedAt: null,
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { loadPlaylists } = await import('./playlists');
+    const [playlist] = await loadPlaylists('u1');
+    expect(playlist.songIds).toEqual(['t1', 't2']);
   });
 
   it('loadPlaylistDetail maps tracks into ordered songIds', async () => {

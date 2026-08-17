@@ -5,6 +5,7 @@ import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/re
 import AddToPlaylistMenu from './AddToPlaylistMenu';
 import * as ls from '../utils/localStorage';
 import * as auth from '../utils/auth';
+import * as playlistsResource from '../utils/resources/playlists';
 
 const pushMock = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock }) }));
@@ -69,6 +70,29 @@ describe('AddToPlaylistMenu', () => {
     fireEvent.click(screen.getByText('My Mix'));
 
     expect(ls.updateRecord).toHaveBeenCalledWith('playlists', 'pl1', { songIds: ['s2'] });
+  });
+
+  it('reverts the optimistic checkmark when the API rejects the add', async () => {
+    (ls.getItem as any).mockImplementation((key: string) => {
+      if (key === 'playlists') return [{ id: 'pl1', userId: 'u1', title: 'Chill', songIds: [] }];
+      return null;
+    });
+    const addSpy = vi
+      .spyOn(playlistsResource, 'addTrackToPlaylist')
+      .mockResolvedValue(false);
+
+    render(<AddToPlaylistMenu songId="s1" />);
+    fireEvent.click(screen.getByLabelText('Add to playlist'));
+
+    await waitFor(() => expect(screen.getByText('Chill')).toBeDefined());
+    fireEvent.click(screen.getByText('Chill'));
+
+    await waitFor(() => expect(addSpy).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByText('Chill').closest('button')?.textContent).not.toContain('✓')
+    );
+
+    addSpy.mockRestore();
   });
 
   it('offers to create a playlist when the user has none', async () => {
