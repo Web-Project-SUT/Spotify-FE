@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getItem, setItem, addRecord, deleteRecord, initializeMockDatabase } from '../utils/localStorage';
 import { apiFetch, apiEnabled, apiLogout, storeTokens, clearTokens } from '../utils/api';
+import { deleteMe } from '../utils/resources/accounts';
 import { mediaUrl } from '../utils/resources/http';
 import {
   hydratePreferences,
@@ -89,7 +90,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<User | null>;
   logout: () => void;
-  deleteAccount: () => void;
+  deleteAccount: () => Promise<boolean>;
   registerListener: (input: RegisterListenerInput) => Promise<User>;
   registerArtist: (input: RegisterArtistInput) => Promise<User>;
   refresh: () => void;
@@ -216,10 +217,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, [user]);
 
-  // Removes the account from the users collection, then logs out.
-  const deleteAccount = useCallback(() => {
-    if (user) deleteRecord('users', user.id);
-    logout();
+  // Deletes the account server-side (DELETE /auth/me/), then logs out. A
+  // failed delete must not log the user out — otherwise the account silently
+  // survives while the UI claims it is gone. Mock mode drops the local record.
+  const deleteAccount = useCallback(async (): Promise<boolean> => {
+    if (!apiEnabled) {
+      if (user) deleteRecord('users', user.id);
+      logout();
+      return true;
+    }
+    const ok = await deleteMe();
+    if (ok) logout();
+    return ok;
   }, [user, logout]);
 
   const registerListener = useCallback(async (input: RegisterListenerInput): Promise<User> => {

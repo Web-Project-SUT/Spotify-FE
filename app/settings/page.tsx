@@ -18,6 +18,7 @@ function SettingsContent() {
   const [notifLimit, setNotifLimit] = useState(false);
   const [volume, setVolume] = useState(80);
   const [prices, setPrices] = useState<SubscriptionPrices | null>(null);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     const prefs = readPreferences();
@@ -26,11 +27,18 @@ function SettingsContent() {
     setPrices(getItem('subscriptionPrices'));
   }, []);
 
-  const handleDeleteAccount = () => {
-    if (confirm(t('settings.deleteConfirm'))) {
-      deleteAccount();
-      router.push('/login');
+  // The account is deleted server-side, so the redirect has to wait for the
+  // result — leaving before it lands would claim a deletion that never
+  // happened.
+  const handleDeleteAccount = async () => {
+    if (!confirm(t('settings.deleteConfirm'))) return;
+    setDeleteError('');
+    const ok = await deleteAccount();
+    if (!ok) {
+      setDeleteError(t('settings.deleteFailed'));
+      return;
     }
+    router.push('/login');
   };
 
   const tier = user?.tier || 'basic';
@@ -111,6 +119,11 @@ function SettingsContent() {
         <Button variant="danger" onClick={handleDeleteAccount}>
           {t('settings.deleteAccount')}
         </Button>
+        {deleteError && (
+          <p role="alert" className="text-danger text-sm mt-3">
+            {deleteError}
+          </p>
+        )}
       </section>
     </div>
   );

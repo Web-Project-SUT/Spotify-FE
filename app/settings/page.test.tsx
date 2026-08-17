@@ -5,7 +5,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import SettingsPage from './page';
 import { LanguageProvider } from '../../context/LanguageContext';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const pushMock = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: pushMock }) }));
 vi.mock('../../components/AppShell', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -61,5 +62,52 @@ describe('SettingsPage language switching', () => {
     );
     expect(screen.getByText('Preferencias')).toBeDefined();
     expect(screen.getByText('Eliminar cuenta')).toBeDefined();
+  });
+});
+
+describe('SettingsPage account deletion', () => {
+  beforeEach(() => {
+    Object.keys(store).forEach((k) => delete store[k]);
+    vi.clearAllMocks();
+    vi.stubGlobal('confirm', vi.fn(() => true));
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it('waits for the server delete before leaving for /login', async () => {
+    deleteAccountMock.mockResolvedValue(true);
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Delete account')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/login'));
+    expect(deleteAccountMock).toHaveBeenCalled();
+  });
+
+  it('keeps the user on the page and explains when the delete fails', async () => {
+    deleteAccountMock.mockResolvedValue(false);
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Delete account')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toBeDefined());
+    expect(screen.getByText(/could not delete your account/i)).toBeDefined();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('does not call the API when the confirm is dismissed', async () => {
+    vi.stubGlobal('confirm', vi.fn(() => false));
+    renderPage();
+    await waitFor(() => expect(screen.getByText('Delete account')).toBeDefined());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete account' }));
+
+    expect(deleteAccountMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 });

@@ -54,6 +54,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'settings.dangerZone': 'Danger zone',
     'settings.deleteAccount': 'Delete account',
     'settings.deleteConfirm': 'Delete your account? This cannot be undone.',
+    'settings.deleteFailed': 'We could not delete your account. Please try again.',
 
     'home.welcomeBack': 'Welcome back',
     'home.recentlyPlayed': 'Recently played',
@@ -215,6 +216,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'settings.dangerZone': 'منطقه خطر',
     'settings.deleteAccount': 'حذف حساب کاربری',
     'settings.deleteConfirm': 'حساب کاربری شما حذف شود؟ این عمل قابل بازگشت نیست.',
+    'settings.deleteFailed': 'حذف حساب کاربری انجام نشد. لطفاً دوباره تلاش کنید.',
 
     'home.welcomeBack': 'خوش آمدید',
     'home.recentlyPlayed': 'اخیراً پخش‌شده',
@@ -376,6 +378,7 @@ export const translations: Record<Language, Record<string, string>> = {
     'settings.dangerZone': 'Zona de peligro',
     'settings.deleteAccount': 'Eliminar cuenta',
     'settings.deleteConfirm': '¿Eliminar tu cuenta? Esto no se puede deshacer.',
+    'settings.deleteFailed': 'No pudimos eliminar tu cuenta. Inténtalo de nuevo.',
 
     'home.welcomeBack': 'Bienvenido de nuevo',
     'home.recentlyPlayed': 'Reproducido recientemente',
