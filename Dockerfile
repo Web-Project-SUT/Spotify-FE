@@ -3,6 +3,11 @@
 
 FROM node:22-alpine AS deps
 WORKDIR /app
+# Same reason as the backend's pip flags: on a slow link npm's two-retry
+# default turns a timeout into a hard "npm ci" failure mid-install.
+ENV npm_config_fetch_retries=10 \
+    npm_config_fetch_retry_maxtimeout=120000 \
+    npm_config_fetch_timeout=600000
 COPY package.json package-lock.json ./
 RUN npm ci
 
