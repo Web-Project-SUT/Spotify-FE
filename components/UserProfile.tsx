@@ -1,16 +1,14 @@
 // components/UserProfile.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import {
-  getItem,
-  updateRecord,
-  setItem,
-  getDailyStreams,
-  initializeMockDatabase,
-} from '../utils/localStorage';
-import { getCurrentUser, getTier } from '../utils/auth';
+import React, { useCallback, useEffect, useState } from 'react';
+import { getItem, setItem, initializeMockDatabase } from '../utils/localStorage';
+import { getCurrentUser } from '../utils/auth';
 import { toggleFollow } from '../utils/follow';
+import { apiEnabled } from '../utils/api';
+import { PublicProfile, loadUserProfile, updateMe } from '../utils/resources/accounts';
+import { loadListeningStats } from '../utils/resources/reports';
+import { uploadAvatar } from '../utils/resources/uploads';
 import { useAuth } from '../context/AuthContext';
 import { User } from '../utils/types';
 import { Avatar, Badge, Button, EmptyState, Input, Spinner } from './ui';
@@ -20,11 +18,13 @@ interface UserProfileProps {
 }
 
 export default function UserProfile({ userId }: UserProfileProps) {
-  const { refresh } = useAuth();
-  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const { refresh, refreshMe } = useAuth();
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [viewer, setViewer] = useState<User | null>(null);
-  const [dailyStreams, setDailyStreams] = useState(0);
+  // null = "not applicable" (another user's daily streams are nobody
+  // else's business, and the backend correctly exposes no endpoint for it).
+  const [dailyStreams, setDailyStreams] = useState<number | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
 
   const [editing, setEditing] = useState(false);
@@ -33,27 +33,43 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwError, setPwError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [avatarError, setAvatarError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     // Seed defensively: React runs this child effect before the parent
     // page / AuthProvider effect, so on a direct load the collections may
     // not exist yet. initializeMockDatabase is a no-op once seeded.
     initializeMockDatabase();
 
-    const users: User[] = getItem('users') || [];
-    const found = users.find((u) => u.id === userId) || null;
     const current = getCurrentUser();
-
-    setProfileUser(found);
-    setNotFound(!found);
     setViewer(current);
-    setDailyStreams(getDailyStreams(userId));
-    setIsFollowing(!!current?.following?.includes(userId));
-    if (found) {
-      setDisplayName(found.displayName || '');
-      setEmail(found.email || '');
+
+    const found = await loadUserProfile(userId);
+    setProfile(found);
+    setNotFound(!found);
+    if (!found) return;
+
+    setIsFollowing(found.isFollowing);
+    setDisplayName(found.displayName || '');
+    // The public projection deliberately omits email; the viewer's own
+    // address comes from the session they are already holding.
+    setEmail(current?.id === found.id ? current?.email || '' : '');
+
+    // Streams-today is a self-only number, and it is aggregated by the
+    // backend — doc.tex forbids counting it in the frontend.
+    if (current?.id === found.id) {
+      const stats = await loadListeningStats();
+      setDailyStreams(stats ? stats.streamsToday : 0);
+    } else {
+      setDailyStreams(null);
     }
   }, [userId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   if (notFound) {
     return (
@@ -63,7 +79,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     );
   }
 
-  if (!profileUser) {
+  if (!profile) {
     return (
       <div className="p-4 sm:p-6 md:p-10 flex items-center justify-center">
         <Spinner size={32} label="Loading profile…" />
@@ -71,24 +87,36 @@ export default function UserProfile({ userId }: UserProfileProps) {
     );
   }
 
-  const tier = getTier(profileUser);
-  const isSelf = viewer?.id === profileUser.id;
+  const tier = profile.tier;
+  const isSelf = viewer?.id === profile.id;
   const canChangeAvatar = tier !== 'basic';
 
-  const save = () => {
+  const save = async () => {
     if (password && password !== confirmPassword) {
       setPwError('Passwords do not match');
       return;
     }
     setPwError('');
-    const payload: Partial<User> = { displayName, email };
-    if (password) payload.password = password;
-    updateRecord('users', profileUser.id, payload);
-    const updated = { ...profileUser, ...payload };
-    setProfileUser(updated);
+    setSaveError('');
+
+    const payload = { displayName, email, ...(password ? { password } : {}) };
+    const error = await updateMe(payload);
+    if (error) {
+      // The backend names the offending field in `fields`; fall back to the
+      // normalized detail so nothing fails silently.
+      const first = error.fields && Object.values(error.fields)[0]?.[0];
+      setSaveError(first || error.detail);
+      return;
+    }
+
+    setProfile({ ...profile, displayName });
     if (isSelf) {
-      setItem('currentUser', updated);
-      refresh();
+      if (apiEnabled) {
+        await refreshMe();
+      } else {
+        setItem('currentUser', { ...(getItem('currentUser') || {}), displayName, email });
+        refresh();
+      }
     }
     setPassword('');
     setConfirmPassword('');
@@ -99,6 +127,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     setPassword('');
     setConfirmPassword('');
     setPwError('');
+    setSaveError('');
     setEditing(false);
   };
 
@@ -106,24 +135,41 @@ export default function UserProfile({ userId }: UserProfileProps) {
     setPassword('');
     setConfirmPassword('');
     setPwError('');
+    setSaveError('');
     setEditing(true);
   };
 
-  const handleFollowToggle = () => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarError('');
+    setUploading(true);
+    const ok = await uploadAvatar(file);
+    setUploading(false);
+    if (!ok) {
+      setAvatarError('Could not upload that photo. Please try another file.');
+      return;
+    }
+    // The stored path is decided server-side, so re-read rather than guess.
+    await load();
+    await refreshMe();
+  };
+
+  const handleFollowToggle = async () => {
     if (!viewer) return;
-    const result = toggleFollow(viewer, profileUser.id, profileUser.followers || 0);
+    const result = await toggleFollow(viewer, profile.id, profile.followerCount, isFollowing);
     setIsFollowing(result.isFollowing);
-    setProfileUser({ ...profileUser, followers: result.followers });
+    setProfile({ ...profile, followerCount: result.followers });
     setViewer({ ...viewer, following: result.following });
   };
 
   return (
     <div className="p-4 sm:p-6 md:p-10 max-w-2xl">
       <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-8">
-        <Avatar src={profileUser.cover} name={profileUser.displayName || profileUser.email} size={96} />
+        <Avatar src={profile.avatar} name={profile.displayName || profile.username} size={96} />
         <div>
-          <h1 className="text-3xl font-bold">{profileUser.displayName || 'Listener'}</h1>
-          <p className="text-muted">@{profileUser.username || profileUser.id}</p>
+          <h1 className="text-3xl font-bold">{profile.displayName || 'Listener'}</h1>
+          <p className="text-muted">@{profile.username || profile.id}</p>
           <div className="mt-2">
             {tier === 'gold' ? (
               <Badge tone="gold">Gold</Badge>
@@ -138,15 +184,17 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
         <div className="bg-surface-2 p-2 sm:p-4 rounded-lg text-center">
-          <p className="text-lg sm:text-2xl font-bold">{(profileUser.followers || 0).toLocaleString()}</p>
+          <p className="text-lg sm:text-2xl font-bold">{profile.followerCount.toLocaleString()}</p>
           <p className="text-muted text-xs sm:text-sm">Followers</p>
         </div>
         <div className="bg-surface-2 p-2 sm:p-4 rounded-lg text-center">
-          <p className="text-lg sm:text-2xl font-bold">{profileUser.following?.length || 0}</p>
+          <p className="text-lg sm:text-2xl font-bold">{profile.followingCount.toLocaleString()}</p>
           <p className="text-muted text-xs sm:text-sm">Following</p>
         </div>
         <div className="bg-surface-2 p-2 sm:p-4 rounded-lg text-center">
-          <p className="text-lg sm:text-2xl font-bold">{dailyStreams.toLocaleString()}</p>
+          <p className="text-lg sm:text-2xl font-bold">
+            {dailyStreams === null ? '—' : dailyStreams.toLocaleString()}
+          </p>
           <p className="text-muted text-xs sm:text-sm">Streams today</p>
         </div>
       </div>
@@ -178,13 +226,33 @@ export default function UserProfile({ userId }: UserProfileProps) {
               error={pwError}
             />
             <div>
-              <label className="block text-sm font-bold mb-1">Profile photo</label>
+              <label htmlFor="avatar-upload" className="block text-sm font-bold mb-1">
+                Profile photo
+              </label>
               {canChangeAvatar ? (
-                <input type="file" accept="image/*" className="text-sm" />
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="text-sm"
+                  disabled={uploading}
+                  onChange={handleAvatarChange}
+                />
               ) : (
                 <p className="text-muted text-sm">Upgrade to silver or gold to change your profile photo.</p>
               )}
+              {uploading && <p className="text-muted text-sm mt-1">Uploading…</p>}
+              {avatarError && (
+                <p role="alert" className="text-danger text-sm mt-1">
+                  {avatarError}
+                </p>
+              )}
             </div>
+            {saveError && (
+              <p role="alert" className="text-danger text-sm">
+                {saveError}
+              </p>
+            )}
             <div className="flex gap-2">
               <Button onClick={save}>Save</Button>
               <Button variant="ghost" onClick={cancelEdit}>

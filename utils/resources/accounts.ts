@@ -1,10 +1,15 @@
 // utils/resources/accounts.ts
 //
-// Account self-service that isn't part of the auth context: password reset.
-// Both endpoints exist on the backend (auth/password-reset/ and .../confirm/).
-// With the backend off, these resolve to a simulated success so the mock demo
-// keeps its existing "check your email" UX.
-import { apiEnabled, apiFetch, API_BASE_URL } from '../api';
+// Account self-service that isn't part of the auth context: password reset,
+// the public profile projection the profile page renders, and the two
+// destructive/self-editing calls on /auth/me/.
+//
+// With the backend off every function falls back to the localStorage mock
+// exactly as before, so the mock-only demo is unaffected.
+import { ApiError, apiEnabled, apiFetch, apiRequest, API_BASE_URL } from '../api';
+import { getItem, updateRecord, deleteRecord } from '../localStorage';
+import { Role, Tier, User } from '../types';
+import { mediaUrl } from './http';
 
 // Always resolves (the backend returns 204 whether or not the email exists,
 // which is the correct anti-enumeration behaviour — we mirror it).
@@ -44,4 +49,110 @@ export async function confirmPasswordReset(
   } catch {
     return { ok: false, error: 'Could not reach the server. Please try again.' };
   }
+}
+
+
+// ---- Public profile ------------------------------------------------------
+
+// What a profile page needs about *any* user. The counts are aggregated by
+// the backend (doc.tex forbids doing that arithmetic in the frontend), and
+// `isFollowing` is resolved against the requesting user server-side, because
+// the viewer's following[] only exists in mock mode.
+export interface PublicProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  tier: Tier;
+  bio: string;
+  avatar?: string;
+  followerCount: number;
+  followingCount: number;
+  isFollowing: boolean;
+}
+
+interface BackendPublicProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  tier: Tier;
+  bio: string;
+  avatar: string | null;
+  followerCount: number;
+  followingCount: number;
+  isFollowing: boolean;
+}
+
+// null means "no such user" — the caller renders its not-found state. In API
+// mode that is a real 404 rather than "absent from the mock collection",
+// which is what made /profile show "User not found" for every real account.
+export async function loadUserProfile(userId: string): Promise<PublicProfile | null> {
+  if (apiEnabled) {
+    const u = await apiFetch<BackendPublicProfile>(`/users/${userId}/`);
+    if (!u) return null;
+    return {
+      id: u.id,
+      username: u.username || '',
+      displayName: u.displayName || '',
+      role: u.role,
+      tier: u.tier || 'basic',
+      bio: u.bio || '',
+      avatar: mediaUrl(u.avatar),
+      followerCount: u.followerCount || 0,
+      followingCount: u.followingCount || 0,
+      isFollowing: !!u.isFollowing,
+    };
+  }
+  const users: User[] = getItem('users') || [];
+  const u = users.find((x) => x.id === userId);
+  if (!u) return null;
+  const me: User | null = getItem('currentUser');
+  return {
+    id: u.id,
+    username: u.username || '',
+    displayName: u.displayName || '',
+    role: u.role,
+    tier: u.tier || 'basic',
+    bio: u.bio || '',
+    avatar: u.cover,
+    followerCount: u.followers || 0,
+    followingCount: u.following?.length || 0,
+    isFollowing: !!me?.following?.includes(userId),
+  };
+}
+
+// ---- The authenticated user ---------------------------------------------
+
+export interface MeUpdate {
+  displayName?: string;
+  email?: string;
+  bio?: string;
+  password?: string;
+}
+
+// Returns the ApiError rather than a bare boolean: the form has to show
+// which field the backend rejected ({detail, code, fields}), and a silent
+// failure here is exactly the class of bug this pass is undoing.
+export async function updateMe(payload: MeUpdate): Promise<ApiError | null> {
+  if (!apiEnabled) {
+    const me: User | null = getItem('currentUser');
+    if (me) updateRecord('users', me.id, payload as Partial<User>);
+    return null;
+  }
+  const { error } = await apiRequest('/auth/me/', { method: 'PATCH', body: payload });
+  return error;
+}
+
+// DELETE /auth/me/ — the account itself, not just the local session. Returns
+// false when the server refused, so the caller can keep the user signed in
+// and say so rather than logging them out of an account that still exists.
+export async function deleteMe(): Promise<boolean> {
+  if (!apiEnabled) {
+    const me: User | null = getItem('currentUser');
+    if (me) deleteRecord('users', me.id);
+    return true;
+  }
+  const { error } = await apiRequest('/auth/me/', { method: 'DELETE' });
+  return !error;
 }

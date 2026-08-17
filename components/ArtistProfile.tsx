@@ -27,7 +27,6 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
       const user = getCurrentUser();
       setCurrentUser(user);
       setIsGold(isGoldUser(user));
-      setIsFollowing(!!user?.following?.includes(artistId));
 
       const [detail, allSongs, allAlbums] = await Promise.all([
         loadArtist(artistId),
@@ -37,8 +36,9 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
       if (!active) return;
 
       if (detail) {
-        // Overlay mock-only social fields (followers/avatar) when present;
-        // identity (name/bio/verified) comes from the resource loader.
+        // Overlay the mock-only avatar when present; identity (name/bio/
+        // verified) and the social numbers come from the resource loader,
+        // which aggregates them server-side in API mode.
         const base: Partial<User> =
           (getItem('users') || []).find((u: User) => u.id === artistId) || {};
         setArtist({
@@ -48,8 +48,9 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
           stageName: detail.stageName,
           bio: detail.bio,
           status: detail.verified ? 'active' : 'pending',
-          followers: base.followers ?? 0,
+          followers: detail.followerCount,
         } as User);
+        setIsFollowing(detail.isFollowing);
       }
 
       setSongs(allSongs.filter((s) => s.artistId === artistId));
@@ -60,10 +61,10 @@ export default function ArtistProfile({ artistId }: ArtistProfileProps) {
     };
   }, [artistId]);
 
-  const handleFollowToggle = () => {
+  const handleFollowToggle = async () => {
     if (!artist || !currentUser) return;
 
-    const result = toggleFollow(currentUser, artistId, artist.followers || 0);
+    const result = await toggleFollow(currentUser, artistId, artist.followers || 0, isFollowing);
     setIsFollowing(result.isFollowing);
     setArtist({ ...artist, followers: result.followers });
     setCurrentUser({ ...currentUser, following: result.following });

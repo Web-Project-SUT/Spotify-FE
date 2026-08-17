@@ -125,6 +125,8 @@ export interface ArtistDetail {
   verified: boolean;
   totalPlays: number;
   totalListeners: number;
+  followerCount: number;
+  isFollowing: boolean;
 }
 
 interface BackendArtistDetail {
@@ -135,6 +137,8 @@ interface BackendArtistDetail {
   verified: boolean;
   totalPlays: number;
   totalListeners: number;
+  followerCount: number;
+  isFollowing: boolean;
 }
 
 export async function loadArtist(id: string): Promise<ArtistDetail | null> {
@@ -148,6 +152,8 @@ export async function loadArtist(id: string): Promise<ArtistDetail | null> {
         verified: a.verified,
         totalPlays: a.totalPlays || 0,
         totalListeners: a.totalListeners || 0,
+        followerCount: a.followerCount || 0,
+        isFollowing: !!a.isFollowing,
       };
     }
   }
@@ -156,6 +162,7 @@ export async function loadArtist(id: string): Promise<ArtistDetail | null> {
   if (!u) return null;
   const songs: Song[] = getItem('songs') || [];
   const mine = songs.filter((s) => s.artistId === id);
+  const me: User | null = getItem('currentUser');
   return {
     id,
     stageName: u.stageName || u.displayName || 'Unknown artist',
@@ -163,6 +170,8 @@ export async function loadArtist(id: string): Promise<ArtistDetail | null> {
     verified: u.status === 'active',
     totalPlays: mine.reduce((n, s) => n + (s.plays || 0), 0),
     totalListeners: mine.reduce((n, s) => n + (s.listenerCount || 0), 0),
+    followerCount: u.followers || 0,
+    isFollowing: !!me?.following?.includes(id),
   };
 }
 

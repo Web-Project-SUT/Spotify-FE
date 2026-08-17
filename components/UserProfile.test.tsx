@@ -14,7 +14,7 @@ vi.mock('../utils/localStorage', () => ({
 }));
 
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ refresh: vi.fn() }),
+  useAuth: () => ({ refresh: vi.fn(), refreshMe: vi.fn() }),
 }));
 
 const basicSelf = {
@@ -115,12 +115,12 @@ describe('UserProfile', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Follow$/i }));
 
-    expect(screen.getByRole('button', { name: /Following/i })).toBeDefined();
+    await waitFor(() => expect(screen.getByRole('button', { name: /Following/i })).toBeDefined());
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u2', { followers: 11 });
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', { following: ['a1', 'u2'] });
 
     fireEvent.click(screen.getByRole('button', { name: /Following/i }));
-    expect(screen.getByRole('button', { name: /^Follow$/i })).toBeDefined();
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Follow$/i })).toBeDefined());
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u2', { followers: 10 });
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', { following: ['a1'] });
   });
@@ -156,11 +156,13 @@ describe('UserProfile', () => {
     fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'newpass123' } });
     fireEvent.click(screen.getByRole('button', { name: /Save/i }));
 
-    expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', {
-      displayName: 'Demo Listener',
-      email: 'listener@demo.com',
-      password: 'newpass123',
-    });
+    await waitFor(() =>
+      expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', {
+        displayName: 'Demo Listener',
+        email: 'listener@demo.com',
+        password: 'newpass123',
+      })
+    );
   });
 
   it('mismatched passwords block save', async () => {
@@ -190,9 +192,11 @@ describe('UserProfile', () => {
     fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Renamed Listener' } });
     fireEvent.click(screen.getByRole('button', { name: /Save/i }));
 
-    expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', {
-      displayName: 'Renamed Listener',
-      email: 'listener@demo.com',
-    });
+    await waitFor(() =>
+      expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', {
+        displayName: 'Renamed Listener',
+        email: 'listener@demo.com',
+      })
+    );
   });
 });

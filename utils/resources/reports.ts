@@ -6,7 +6,7 @@
 // off so the mock dashboards keep rendering their localStorage-derived
 // numbers unchanged.
 import { apiEnabled, apiFetch } from '../api';
-import { getItem, updateRecord } from '../localStorage';
+import { getDailyStreams, getItem, updateRecord } from '../localStorage';
 import { getCurrentUser } from '../auth';
 import { Payout, RevenueData, Song, User } from '../types';
 import { fetchAll, mediaUrl } from './http';
@@ -219,4 +219,32 @@ export async function loadAdminOverview(): Promise<AdminOverview | null> {
     })),
     tierDistribution: data.tierDistribution,
   };
+}
+
+// ---- Listener: my own listening stats -----------------------------------
+
+// Backs the "streams today" tile on the profile page. Server-side because
+// doc.tex forbids the frontend aggregating this, and because the daily cap
+// it reports is enforced there anyway (DailyStreamQuota).
+export interface ListeningStats {
+  streamsToday: number;
+  streamsThisMonth: number;
+  dailyLimit: number | null;
+  remainingToday: number | null;
+}
+
+export async function loadListeningStats(): Promise<ListeningStats | null> {
+  if (!apiEnabled) {
+    const me = getCurrentUser();
+    if (!me) return null;
+    // The mock store only ever counted today's plays; the rest has no
+    // local counterpart, so report it as unknown rather than inventing it.
+    return {
+      streamsToday: getDailyStreams(me.id),
+      streamsThisMonth: 0,
+      dailyLimit: null,
+      remainingToday: null,
+    };
+  }
+  return apiFetch<ListeningStats>('/reports/me/listening/');
 }

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { getItem, setItem, addRecord, deleteRecord, initializeMockDatabase } from '../utils/localStorage';
 import { apiFetch, apiEnabled, apiLogout, storeTokens, clearTokens } from '../utils/api';
+import { mediaUrl } from '../utils/resources/http';
 import {
   hydratePreferences,
   pullPreferences,
@@ -45,6 +46,9 @@ function mapBackendUser(u: BackendUser): User {
     birthDate: u.birthDate || undefined,
     gender: (u.gender || undefined) as Gender | undefined,
     bio: u.bio || undefined,
+    // The API returns a relative media path; absolutize it here so every
+    // Avatar/CoverArt reading `user.cover` gets a loadable src.
+    cover: mediaUrl(u.avatar),
   };
 }
 

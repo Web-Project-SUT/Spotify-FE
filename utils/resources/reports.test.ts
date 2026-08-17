@@ -11,6 +11,17 @@ describe('reports resource — API disabled (mock fallback)', () => {
     vi.doUnmock('../auth');
   });
 
+  it('falls back to the local daily stream counter', async () => {
+    vi.doMock('../auth', () => ({ getCurrentUser: () => ({ id: 'u1' }) }));
+    vi.doMock('../localStorage', () => ({
+      getItem: () => [],
+      updateRecord: vi.fn(),
+      getDailyStreams: (id: string) => (id === 'u1' ? 7 : 0),
+    }));
+    const { loadListeningStats } = await import('./reports');
+    expect(await loadListeningStats()).toMatchObject({ streamsToday: 7, dailyLimit: null });
+  });
+
   it('aggregates the current artist\'s own songs for the summary', async () => {
     vi.doMock('../auth', () => ({ getCurrentUser: () => ({ id: 'a1' }) }));
     vi.doMock('../localStorage', () => ({
@@ -65,6 +76,24 @@ describe('reports resource — API mode', () => {
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_API_URL;
     vi.restoreAllMocks();
+  });
+
+  it('reads listening stats from the backend rather than counting locally', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ streamsToday: 12, streamsThisMonth: 340, dailyLimit: 60, remainingToday: 48 }),
+      })
+    );
+    const { loadListeningStats } = await import('./reports');
+    expect(await loadListeningStats()).toEqual({
+      streamsToday: 12,
+      streamsThisMonth: 340,
+      dailyLimit: 60,
+      remainingToday: 48,
+    });
   });
 
   it('maps the artist summary, coercing the decimal earnings string', async () => {

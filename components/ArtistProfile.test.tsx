@@ -100,13 +100,13 @@ describe('ArtistProfile', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Follow/i }));
 
-    expect(screen.getByRole('button', { name: /Following/i })).toBeDefined();
+    await waitFor(() => expect(screen.getByRole('button', { name: /Following/i })).toBeDefined());
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'a1', { followers: 1001 });
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', { following: ['a1'] });
 
     fireEvent.click(screen.getByRole('button', { name: /Following/i }));
 
-    expect(screen.getByRole('button', { name: /Follow/i })).toBeDefined();
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Follow$/i })).toBeDefined());
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'a1', { followers: 1000 });
     expect(localStorageUtils.updateRecord).toHaveBeenCalledWith('users', 'u1', { following: [] });
   });
