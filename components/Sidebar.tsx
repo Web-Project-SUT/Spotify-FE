@@ -23,6 +23,7 @@ const NAV: NavItem[] = [
   { href: '/help', labelKey: 'nav.help', icon: '🎧', roles: ['listener', 'artist'] },
   { href: '/settings', labelKey: 'nav.settings', icon: '⚙️', roles: ['listener', 'artist'] },
   { href: '/artist-panel', labelKey: 'nav.myWorks', icon: '🎨', roles: ['artist'] },
+  { href: '/artist-panel/albums', labelKey: 'nav.albums', icon: '💿', roles: ['artist'] },
   { href: '/artist-panel/upload', labelKey: 'nav.upload', icon: '⬆️', roles: ['artist'] },
   { href: '/support', labelKey: 'nav.tickets', icon: '🎫', roles: ['support', 'admin'] },
   { href: '/dashboard', labelKey: 'nav.financials', icon: '💰', roles: ['admin'] },
