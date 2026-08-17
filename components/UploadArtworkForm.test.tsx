@@ -9,6 +9,8 @@ import * as authUtils from '../utils/auth';
 
 vi.mock('../utils/localStorage', () => ({
   addRecord: vi.fn(),
+  updateRecord: vi.fn(),
+  deleteRecord: vi.fn(),
   getItem: vi.fn(),
   setItem: vi.fn(),
 }));
@@ -101,6 +103,51 @@ describe('UploadArtworkForm', () => {
 
     expect(screen.getByText(/Only approved artists can upload/i)).toBeDefined();
     expect(localStorageUtils.addRecord).not.toHaveBeenCalled();
+  });
+
+  // The two release-type radios are unlabelled inputs inside their <label>;
+  // clicking the label text does not toggle them in this DOM, so reach for
+  // the input itself.
+  const albumRadio = () =>
+    document.querySelectorAll('input[type="radio"]')[1] as HTMLInputElement;
+
+  it("offers only the artist's own albums once the album release type is picked", async () => {
+    (localStorageUtils.getItem as any).mockReturnValue([
+      { id: 'album1', title: 'Skyline Echoes', artistId: 'a1', releaseYear: 2024 },
+      { id: 'album2', title: 'Not Mine', artistId: 'a2', releaseYear: 2023 },
+    ]);
+    renderForm();
+
+    // The selector is irrelevant to a single, so it stays hidden.
+    expect(screen.queryByRole('combobox')).toBeNull();
+    fireEvent.click(albumRadio());
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeDefined());
+    expect(screen.getByRole('option', { name: 'Skyline Echoes' })).toBeDefined();
+    expect(screen.queryByRole('option', { name: 'Not Mine' })).toBeNull();
+  });
+
+  it('files a new track into the selected album', async () => {
+    (localStorageUtils.getItem as any).mockReturnValue([
+      { id: 'album1', title: 'Skyline Echoes', artistId: 'a1', releaseYear: 2024 },
+    ]);
+    renderForm();
+
+    fireEvent.click(albumRadio());
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeDefined());
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'album1' } });
+
+    fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Album Cut' } });
+    const audioInput = screen.getByLabelText(/Audio file/i) as HTMLInputElement;
+    fireEvent.change(audioInput, { target: { files: [makeFile('track.mp3', 'audio/mpeg')] } });
+    fireEvent.click(screen.getByText('Submit artwork'));
+
+    await waitFor(() => {
+      expect(localStorageUtils.addRecord).toHaveBeenCalledWith(
+        'songs',
+        expect.objectContaining({ title: 'Album Cut', albumId: 'album1', releaseType: 'album_track' })
+      );
+    });
   });
 
   it('parses collaborators into an array', async () => {

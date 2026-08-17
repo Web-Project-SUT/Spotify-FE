@@ -1,12 +1,13 @@
 // components/UploadArtworkForm.tsx
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { addRecord } from '../utils/localStorage';
 import { apiEnabled } from '../utils/api';
 import { getCurrentUser } from '../utils/auth';
-import { createTrack } from '../utils/resources/catalog';
+import { createTrack, loadMyAlbums } from '../utils/resources/catalog';
 import { uploadTrackAudio, uploadTrackCover } from '../utils/resources/uploads';
 import { useLanguage } from '../context/LanguageContext';
+import { Album } from '../utils/types';
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/flac', 'audio/x-flac'];
 
@@ -19,11 +20,27 @@ export default function UploadArtworkForm() {
     lyrics: '',
     collaborators: '',
     releaseType: 'single' as 'single' | 'album_track',
+    albumId: '',
   });
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // The album selector only ever offers the signed-in artist's own albums —
+  // the backend rejects a track pointed at someone else's album anyway.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const artist = getCurrentUser();
+      const mine = artist ? await loadMyAlbums(artist.id) : [];
+      if (active) setAlbums(mine);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -51,7 +68,7 @@ export default function UploadArtworkForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const resetForm = () => {
-    setFormData({ title: '', genre: '', year: '', lyrics: '', collaborators: '', releaseType: 'single' });
+    setFormData({ title: '', genre: '', year: '', lyrics: '', collaborators: '', releaseType: 'single', albumId: '' });
     setAudioFile(null);
     setCoverFile(null);
     setCoverPreview(null);
@@ -89,6 +106,7 @@ export default function UploadArtworkForm() {
         lyrics: formData.lyrics.trim() || undefined,
         releaseType: formData.releaseType,
         collaborators,
+        albumId: formData.albumId || null,
       });
 
       // Which store the track belongs in is decided by apiEnabled alone. Keying
@@ -121,6 +139,7 @@ export default function UploadArtworkForm() {
           lyrics: formData.lyrics.trim() || undefined,
           collaborators,
           releaseType: formData.releaseType,
+          albumId: formData.albumId || undefined,
           audioFileName: audioFile.name,
         });
       }
@@ -143,7 +162,7 @@ export default function UploadArtworkForm() {
           <input
             type="radio"
             checked={formData.releaseType === 'single'}
-            onChange={() => setFormData({ ...formData, releaseType: 'single' })}
+            onChange={() => setFormData({ ...formData, releaseType: 'single', albumId: '' })}
           />
           {t('upload.single')}
         </label>
@@ -156,6 +175,30 @@ export default function UploadArtworkForm() {
           {t('upload.album')}
         </label>
       </div>
+
+      {formData.releaseType === 'album_track' && (
+        <div>
+          <label htmlFor="album-select" className="block text-sm text-gray-400 mb-1">
+            {t('upload.albumLabel')}
+          </label>
+          <select
+            id="album-select"
+            className="block w-full p-2 bg-gray-800 rounded"
+            value={formData.albumId}
+            onChange={(e) => setFormData({ ...formData, albumId: e.target.value })}
+          >
+            <option value="">{t('upload.albumNone')}</option>
+            {albums.map((album) => (
+              <option key={album.id} value={album.id}>
+                {album.title}
+              </option>
+            ))}
+          </select>
+          {albums.length === 0 && (
+            <p className="text-xs text-gray-500 mt-1">{t('upload.albumEmptyHint')}</p>
+          )}
+        </div>
+      )}
 
       <input
         className="block w-full p-2 bg-gray-800 rounded"
