@@ -27,6 +27,15 @@ interface BackendUser {
   birthDate: string | null;
   gender: string;
   preferences: Partial<Preferences>;
+  // Null for a basic listener; the active row's expiry is what /upgrade
+  // needs to show when the plan runs out and to offer a renewal.
+  subscription: {
+    tier: Tier;
+    periodMonths: number;
+    startsAt: string;
+    expiresAt: string;
+    status: string;
+  } | null;
 }
 
 interface LoginResponse {
@@ -50,6 +59,7 @@ function mapBackendUser(u: BackendUser): User {
     // The API returns a relative media path; absolutize it here so every
     // Avatar/CoverArt reading `user.cover` gets a loadable src.
     cover: mediaUrl(u.avatar),
+    subscriptionExpiresAt: u.subscription?.expiresAt || undefined,
   };
 }
 

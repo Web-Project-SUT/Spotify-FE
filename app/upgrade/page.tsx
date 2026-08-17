@@ -31,6 +31,10 @@ function UpgradeContent() {
 
   const result = (params.get('payment') as PaymentResult) || null;
   const currentTier = user?.tier || 'basic';
+  // API mode only: mock mode has no subscription row, so no expiry to show.
+  const expiresAt = user?.subscriptionExpiresAt
+    ? new Date(user.subscriptionExpiresAt).toLocaleDateString()
+    : null;
 
   useEffect(() => {
     let active = true;
@@ -74,6 +78,9 @@ function UpgradeContent() {
           {t('upgrade.currentPlan')}:{' '}
           <span className="capitalize font-semibold">{currentTier}</span>
         </p>
+        {expiresAt && (
+          <p className="text-muted text-sm mt-1">{t('upgrade.expiresOn', { date: expiresAt })}</p>
+        )}
       </div>
 
       {result === 'success' && (
@@ -130,15 +137,20 @@ function UpgradeContent() {
                   {t('upgrade.total', { amount: total.toFixed(2) })}
                 </p>
               )}
+              {isCurrent && (
+                <p className="text-accent text-xs font-bold uppercase">
+                  {t('upgrade.currentPlanButton')}
+                </p>
+              )}
               <Button
                 className="w-full"
-                disabled={isCurrent || busyTier !== null}
+                disabled={busyTier !== null}
                 onClick={() => void handleSubscribe(plan)}
               >
-                {isCurrent
-                  ? t('upgrade.currentPlanButton')
-                  : busyTier === plan.tier
-                    ? t('upgrade.processing')
+                {busyTier === plan.tier
+                  ? t('upgrade.processing')
+                  : isCurrent
+                    ? t('upgrade.renew')
                     : t('upgrade.subscribe')}
               </Button>
             </Card>

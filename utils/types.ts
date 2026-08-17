@@ -28,6 +28,7 @@ export interface User {
   followers?: number;
   following?: string[]; // ids of artists/users this user follows
   cover?: string;
+  subscriptionExpiresAt?: string; // ISO timestamp of the active subscription's expiry (API mode)
 }
 
 export interface Song {
