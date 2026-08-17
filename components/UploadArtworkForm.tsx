@@ -99,7 +99,7 @@ export default function UploadArtworkForm() {
     setSubmitting(true);
     try {
       // API mode: create the track row, then PUT the audio (and cover) to it.
-      const newId = await createTrack({
+      const { id: newId, error: createError } = await createTrack({
         title: formData.title.trim(),
         genre: formData.genre.trim() || undefined,
         year: formData.year ? parseInt(formData.year, 10) : undefined,
@@ -114,7 +114,9 @@ export default function UploadArtworkForm() {
       // localStorage, where only this browser can ever see it.
       if (apiEnabled) {
         if (!newId) {
-          setError(t('upload.errorCreateFailed'));
+          // Prefer the backend's own reason ("Only approved artists may
+          // perform this action.") over the generic fields hint.
+          setError(createError?.detail || t('upload.errorCreateFailed'));
           return;
         }
         const audioOk = await uploadTrackAudio(newId, { high: audioFile });

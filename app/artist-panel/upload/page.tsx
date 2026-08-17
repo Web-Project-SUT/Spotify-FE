@@ -2,13 +2,16 @@
 'use client';
 import React from 'react';
 import AppShell from '../../../components/AppShell';
+import ArtistApprovalGate from '../../../components/ArtistApprovalGate';
 import UploadArtworkForm from '../../../components/UploadArtworkForm';
 
 export default function UploadArtworkPage() {
   return (
     <AppShell allow={['artist']}>
       <div className="p-4 md:p-8">
-        <UploadArtworkForm />
+        <ArtistApprovalGate>
+          <UploadArtworkForm />
+        </ArtistApprovalGate>
       </div>
     </AppShell>
   );

@@ -7,7 +7,7 @@
 // the exact mock shapes the rest of the app already understands; when it is
 // not, the loaders return the same localStorage values as before, so every
 // mock-mode test keeps passing untouched.
-import { apiEnabled, apiFetch } from '../api';
+import { ApiError, apiEnabled, apiFetch, apiRequest } from '../api';
 import { getItem, addRecord, updateRecord, deleteRecord } from '../localStorage';
 import { Song, Album, User } from '../types';
 import { fetchAll, mediaUrl } from './http';
@@ -205,12 +205,22 @@ export interface NewTrackInput {
   albumId?: string | null;
 }
 
+export interface CreateTrackResult {
+  id: string | null;
+  error: ApiError | null;
+}
+
 // Create a track's metadata row (POST /tracks/, approved-artists only) and
-// return the new id so the caller can upload audio/cover to it. Returns null
+// return the new id so the caller can upload audio/cover to it. `id` is null
 // when the backend is off — the mock form persists locally instead.
-export async function createTrack(input: NewTrackInput): Promise<string | null> {
-  if (!apiEnabled) return null;
-  const created = await apiFetch<{ id: string }>('/tracks/', {
+//
+// The ApiError comes back with it because the two ways this fails need
+// different words: a pending artist gets a 403 "Only approved artists may
+// perform this action", and telling them to "check the fields" sends them off
+// to re-check fields that were never the problem.
+export async function createTrack(input: NewTrackInput): Promise<CreateTrackResult> {
+  if (!apiEnabled) return { id: null, error: null };
+  const { data, error } = await apiRequest<{ id: string }>('/tracks/', {
     method: 'POST',
     body: {
       title: input.title,
@@ -222,7 +232,7 @@ export async function createTrack(input: NewTrackInput): Promise<string | null> 
       album: input.albumId || null,
     },
   });
-  return created?.id ?? null;
+  return { id: data?.id ?? null, error };
 }
 
 // Patch an existing track's metadata (PATCH /tracks/{id}/, owner only). The
