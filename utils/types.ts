@@ -79,6 +79,9 @@ export interface Notification {
   type: 'subscription' | 'release' | 'approval' | 'support';
   isRead: boolean;
   createdAt: string;
+  // App-relative path the card navigates to when clicked (e.g. "/album/1").
+  // Empty/undefined when there's nothing to link to.
+  link?: string;
 }
 export type TicketStatus = 'open' | 'answered' | 'closed';
 

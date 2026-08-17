@@ -6,6 +6,12 @@ import NotificationPanel from './NotificationPanel';
 import { LanguageProvider } from '../context/LanguageContext';
 import * as localStorageUtils from '../utils/localStorage';
 
+const pushMock = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+}));
+
 vi.mock('../utils/localStorage', () => ({
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -92,6 +98,48 @@ describe('NotificationPanel', () => {
     await waitFor(() => {
       expect(screen.queryByText('Test Notif')).toBeNull();
     });
+  });
+
+  it('clicking a notification with a link navigates and marks it read', async () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentUser') return { id: 'u1', role: 'listener' };
+      if (key === 'notifications') {
+        return [
+          { id: '1', userId: 'u1', title: 'New release', message: 'msg', type: 'release', isRead: false, link: '/album/al1', createdAt: '' },
+        ];
+      }
+      return [];
+    });
+
+    renderPanel();
+    await waitFor(() => expect(screen.getByText('New release')).toBeDefined());
+
+    fireEvent.click(screen.getByText('New release'));
+
+    expect(pushMock).toHaveBeenCalledWith('/album/al1');
+    expect(localStorageUtils.setItem).toHaveBeenCalledWith(
+      'notifications',
+      expect.arrayContaining([expect.objectContaining({ id: '1', isRead: true })])
+    );
+  });
+
+  it('clicking "Delete" on a linked notification does not navigate', async () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentUser') return { id: 'u1', role: 'listener' };
+      if (key === 'notifications') {
+        return [
+          { id: '1', userId: 'u1', title: 'New release', message: 'msg', type: 'release', isRead: false, link: '/album/al1', createdAt: '' },
+        ];
+      }
+      return [];
+    });
+
+    renderPanel();
+    await waitFor(() => expect(screen.getByText('New release')).toBeDefined());
+
+    fireEvent.click(screen.getByText('Delete'));
+
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('shows a role-specific empty state for a listener with no notifications', async () => {

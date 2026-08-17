@@ -2,9 +2,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getItem, setItem } from '../utils/localStorage';
 import { Notification, User } from '../utils/types';
-import { loadNotifications, markAllNotificationsRead } from '../utils/resources/notifications';
+import {
+  loadNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  hideNotification,
+} from '../utils/resources/notifications';
 import { useLanguage } from '../context/LanguageContext';
 
 // Per spec, the empty-list message and overall framing differ slightly
@@ -23,6 +29,7 @@ function emptyStateKey(role?: User['role']): string {
 
 export default function NotificationPanel() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [role, setRole] = useState<User['role'] | undefined>(undefined);
   const [loaded, setLoaded] = useState(false);
@@ -44,15 +51,19 @@ export default function NotificationPanel() {
   }, []);
 
   const markAsRead = (id: string) => {
-    const updated = notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n));
-    setNotifications(updated);
-    persistAll(updated);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    void markNotificationRead(id);
   };
 
   const deleteNotification = (id: string) => {
-    const updated = notifications.filter((n) => n.id !== id);
-    setNotifications(updated);
-    persistAll(updated);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    void hideNotification(id);
+  };
+
+  const openNotification = (n: Notification) => {
+    if (!n.link) return;
+    if (!n.isRead) markAsRead(n.id);
+    router.push(n.link);
   };
 
   const markAllRead = () => {
@@ -92,17 +103,30 @@ export default function NotificationPanel() {
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`p-3 rounded border ${n.isRead ? 'bg-gray-800' : 'bg-gray-700 border-blue-500'}`}
+            onClick={() => openNotification(n)}
+            className={`p-3 rounded border ${n.isRead ? 'bg-gray-800' : 'bg-gray-700 border-blue-500'} ${n.link ? 'cursor-pointer' : ''}`}
           >
             <p className="text-white font-bold text-sm">{n.title}</p>
             <p className="text-gray-300 text-xs mt-1">{n.message}</p>
             <div className="flex gap-2 mt-2">
               {!n.isRead && (
-                <button onClick={() => markAsRead(n.id)} className="text-[10px] text-green-400">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markAsRead(n.id);
+                  }}
+                  className="text-[10px] text-green-400"
+                >
                   {t('notifications.read')}
                 </button>
               )}
-              <button onClick={() => deleteNotification(n.id)} className="text-[10px] text-red-400">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteNotification(n.id);
+                }}
+                className="text-[10px] text-red-400"
+              >
                 {t('notifications.delete')}
               </button>
             </div>
