@@ -71,6 +71,7 @@ export function mapTrack(t: BackendTrack): Song {
     lyrics: t.lyrics ?? undefined,
     audioUrlHigh: mediaUrl(t.audioHigh),
     audioUrlLow: mediaUrl(t.audioLow),
+    earlyAccessUntil: t.earlyAccessUntil ?? undefined,
   };
 }
 
@@ -86,9 +87,15 @@ export function mapAlbum(a: BackendAlbum): Album {
 
 // ---- Loaders (API when enabled, mock localStorage otherwise) ------------
 
-export async function loadSongs(): Promise<Song[]> {
-  if (!apiEnabled) return getItem('songs') || [];
-  const tracks = await fetchAll<BackendTrack>('/tracks/');
+export async function loadSongs(options?: { earlyAccess?: boolean }): Promise<Song[]> {
+  if (!apiEnabled) {
+    const songs: Song[] = getItem('songs') || [];
+    if (!options?.earlyAccess) return songs;
+    const now = Date.now();
+    return songs.filter((s) => s.earlyAccessUntil && new Date(s.earlyAccessUntil).getTime() > now);
+  }
+  const path = options?.earlyAccess ? '/tracks/?earlyAccess=true' : '/tracks/';
+  const tracks = await fetchAll<BackendTrack>(path);
   return tracks.map(mapTrack);
 }
 

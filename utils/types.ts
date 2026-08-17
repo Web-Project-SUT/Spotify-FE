@@ -48,6 +48,7 @@ export interface Song {
   audioFileName?: string; // mock-only; phase 2 replaces this with a real uploaded asset path
   audioUrlHigh?: string; // Optional
   audioUrlLow?: string;  // Optional
+  earlyAccessUntil?: string; // ISO timestamp; gold-only visibility until this passes
 }
 
 export interface Album {

@@ -42,6 +42,27 @@ describe('catalog mappers', () => {
     expect(song.audioUrlHigh).toBeUndefined();
   });
 
+  it('threads earlyAccessUntil through so gold-gating has something to filter on', () => {
+    const song = mapTrack({
+      id: 't3',
+      artist: 'a1',
+      album: null,
+      title: 'Embargoed',
+      genre: null,
+      releaseYear: 2026,
+      releasedAt: null,
+      releaseType: 'single',
+      durationMs: 180000,
+      playCount: 0,
+      uniqueListenerCount: 0,
+      earlyAccessUntil: '2027-01-01T00:00:00Z',
+      cover: null,
+      audioHigh: null,
+      audioLow: null,
+    });
+    expect(song.earlyAccessUntil).toBe('2027-01-01T00:00:00Z');
+  });
+
   it('falls back to releasedAt year when releaseYear is null', () => {
     const song = mapTrack({
       id: 't2',
@@ -101,6 +122,22 @@ describe('catalog loaders — mock fallback (API disabled)', () => {
     expect(songs).toEqual([{ id: 's1', title: 'X' }]);
   });
 
+  it('loadSongs({ earlyAccess: true }) filters the mock store on earlyAccessUntil', async () => {
+    vi.doMock('../localStorage', () => ({
+      getItem: (key: string) =>
+        key === 'songs'
+          ? [
+              { id: 's1', title: 'Embargoed', earlyAccessUntil: '2099-01-01T00:00:00Z' },
+              { id: 's2', title: 'Released', earlyAccessUntil: '2000-01-01T00:00:00Z' },
+              { id: 's3', title: 'Never gated' },
+            ]
+          : [],
+    }));
+    const { loadSongs } = await import('./catalog');
+    const songs = await loadSongs({ earlyAccess: true });
+    expect(songs.map((s: any) => s.id)).toEqual(['s1']);
+  });
+
   it('loadArtistNames derives the map from seeded users in mock mode', async () => {
     vi.doMock('../localStorage', () => ({
       getItem: (key: string) =>
@@ -155,5 +192,19 @@ describe('catalog loaders — API mode (mapping + pagination)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(albums.map((a) => a.id)).toEqual(['al1', 'al2']);
     expect(albums[0]).toMatchObject({ title: 'One', artistId: 'a1', releaseYear: 2024 });
+  });
+
+  it('loadSongs({ earlyAccess: true }) requests the real backend filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ count: 0, next: null, previous: null, results: [] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { loadSongs } = await import('./catalog');
+    await loadSongs({ earlyAccess: true });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('http://backend.test/api/tracks/?earlyAccess=true');
   });
 });

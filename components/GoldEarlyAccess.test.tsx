@@ -61,7 +61,18 @@ describe('GoldEarlyAccess', () => {
   it('shows exclusive tracks for a gold-tier listener', async () => {
     (localStorageUtils.getItem as any).mockImplementation((key: string) => {
       if (key === 'currentUser') return { id: 'u3', role: 'listener', tier: 'gold' };
-      if (key === 'songs') return [{ id: 's1', title: 'New Drop', artistId: 'a1', cover: '🎵', plays: 0, year: 2025 }];
+      if (key === 'songs')
+        return [
+          {
+            id: 's1',
+            title: 'New Drop',
+            artistId: 'a1',
+            cover: '🎵',
+            plays: 0,
+            year: 2025,
+            earlyAccessUntil: '2099-01-01T00:00:00Z',
+          },
+        ];
       return [];
     });
 
@@ -72,6 +83,32 @@ describe('GoldEarlyAccess', () => {
     });
     expect(screen.getByText(/Gold early access/i)).toBeDefined();
     expect(screen.getByText('New Drop')).toBeDefined();
+  });
+
+  it('excludes tracks whose early access window has already passed', async () => {
+    (localStorageUtils.getItem as any).mockImplementation((key: string) => {
+      if (key === 'currentUser') return { id: 'u3', role: 'listener', tier: 'gold' };
+      if (key === 'songs')
+        return [
+          {
+            id: 's1',
+            title: 'Old News',
+            artistId: 'a1',
+            cover: '🎵',
+            plays: 0,
+            year: 2020,
+            earlyAccessUntil: '2020-01-01T00:00:00Z',
+          },
+        ];
+      return [];
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText(/No early access tracks available/i)).toBeDefined();
+    });
+    expect(screen.queryByText('Old News')).toBeNull();
   });
 
   it('shows an empty state for a gold-tier listener when there are no songs', async () => {

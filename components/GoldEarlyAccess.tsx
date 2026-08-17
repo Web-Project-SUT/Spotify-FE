@@ -19,14 +19,13 @@ export default function GoldEarlyAccess() {
     setIsGold(isGoldUser());
     let active = true;
     void (async () => {
-      // Early access songs are simply the most recently released tracks,
-      // surfaced here before they appear anywhere else for non-gold users.
-      const allSongs: Song[] = await loadSongs();
+      // Ask the backend for the real early-access set (early_access_until in
+      // the future) rather than approximating it by sorting the whole
+      // catalog by year — a gold user should see exactly the embargoed
+      // tracks, not just "whatever's newest".
+      const songs: Song[] = await loadSongs({ earlyAccess: true });
       if (!active) return;
-      const newest = [...allSongs]
-        .sort((a, b) => (b.year || 0) - (a.year || 0))
-        .slice(0, 4);
-      setEarlyAccessSongs(newest);
+      setEarlyAccessSongs(songs.slice(0, 4));
     })();
     return () => {
       active = false;
