@@ -12,7 +12,7 @@ import { useLanguage } from '../context/LanguageContext';
 // WebSocket channel so sync works across different devices/users.
 const SESSION_KEY = 'groupSession';
 
-export default function GroupSession() {
+export default function GroupSession({ inviteId }: { inviteId?: string }) {
   const { t } = useLanguage();
   const [session, setSession] = useState<GroupSessionData | null>(null);
   const [userId, setUserId] = useState<string>('');
@@ -37,6 +37,26 @@ export default function GroupSession() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
+  // Arriving via a `?invite=<id>` link: join that session id directly
+  // rather than whatever (if anything) happens to be in local storage —
+  // the host's own local state was never shared with us, so the WebSocket
+  // relay is what actually brings us in sync once the host next broadcasts.
+  useEffect(() => {
+    if (!inviteId || !userId) return;
+    setSession((prev) => {
+      if (prev && prev.id === inviteId) return prev;
+      const joined: GroupSessionData = {
+        id: inviteId,
+        hostId: '',
+        members: [userId],
+        isPlaying: false,
+        progress: 0,
+      };
+      setItem(SESSION_KEY, joined);
+      return joined;
+    });
+  }, [inviteId, userId]);
+
   // Real-time sync: when a session is active and the backend is enabled, open
   // a WebSocket to the group consumer and apply inbound play/pause/seek
   // events to local state. No-op in mock mode (openGroupSocket returns null),
@@ -50,6 +70,7 @@ export default function GroupSession() {
           ...prev,
           isPlaying: event.action === 'play',
           progress: event.progress,
+          ...(event.trackId ? { currentSongId: event.trackId } : {}),
         };
         setItem(SESSION_KEY, next);
         return next;
@@ -63,8 +84,8 @@ export default function GroupSession() {
   }, [session?.id]);
 
   // Broadcast a playback change to the room (no-op in mock mode).
-  const broadcast = useCallback((action: SessionAction, progress: number) => {
-    socketRef.current?.send({ action, progress });
+  const broadcast = useCallback((action: SessionAction, progress: number, trackId?: string) => {
+    socketRef.current?.send({ action, progress, trackId });
   }, []);
 
   const persist = useCallback((next: GroupSessionData | null) => {
@@ -115,7 +136,7 @@ export default function GroupSession() {
     if (!session) return;
     const track: Song | null = getItem('currentTrack');
     persist({ ...session, currentSongId: track?.id, isPlaying: true, progress: 0 });
-    broadcast('play', 0);
+    broadcast('play', 0, track?.id);
   };
 
   const copyInvite = () => {

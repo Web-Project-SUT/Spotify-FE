@@ -5,20 +5,26 @@
 // play/pause/seek propagate across devices. Only used when the backend is
 // enabled; in mock mode the component falls back to cross-tab localStorage
 // sync and never constructs a socket.
-import { apiEnabled } from '../api';
+import { apiEnabled, getAccessToken } from '../api';
 
 export type SessionAction = 'play' | 'pause' | 'seek';
 export interface SessionEvent {
   action: SessionAction;
   progress: number;
+  trackId?: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-// Derive the ws(s):// origin from the http(s) API URL, dropping the /api path.
+// Derive the ws(s):// origin from the http(s) API URL, dropping the /api
+// path. The consumer requires auth (apps/common/consumers.py), and the
+// browser WebSocket API can't set an Authorization header, so the access
+// token travels as a query param instead.
 function sessionUrl(sessionId: string): string {
   const origin = API_URL.replace(/\/api\/?$/, '').replace(/^http/, 'ws');
-  return `${origin}/ws/session/${sessionId}/`;
+  const token = getAccessToken();
+  const query = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `${origin}/ws/session/${sessionId}/${query}`;
 }
 
 export interface GroupSocket {
