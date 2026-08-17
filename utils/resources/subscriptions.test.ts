@@ -57,7 +57,7 @@ describe('subscriptions resource — API mode', () => {
     expect(plans[0]).toEqual({ id: 's', tier: 'silver', monthlyPrice: 4.99 });
   });
 
-  it('startPayment POSTs { planId } and returns the gateway URL', async () => {
+  it('startPayment defaults to a 1-month period', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -69,7 +69,20 @@ describe('subscriptions resource — API mode', () => {
     expect(url).toBe('https://sandbox.zarinpal.com/pg/StartPay/A1');
     const [reqUrl, opts] = fetchMock.mock.calls[0];
     expect(reqUrl).toBe('http://backend.test/api/subscriptions/pay/start/');
-    expect(JSON.parse(opts.body)).toEqual({ planId: 'g' });
+    expect(JSON.parse(opts.body)).toEqual({ planId: 'g', periodMonths: 1 });
+  });
+
+  it('startPayment POSTs the chosen period', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ paymentUrl: 'https://sandbox.zarinpal.com/pg/StartPay/A1' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { startPayment } = await import('./subscriptions');
+    await startPayment('g', 12);
+    const [, opts] = fetchMock.mock.calls[0];
+    expect(JSON.parse(opts.body)).toEqual({ planId: 'g', periodMonths: 12 });
   });
 
   it('updatePlanPrice PATCHes the plan with monthlyPrice', async () => {

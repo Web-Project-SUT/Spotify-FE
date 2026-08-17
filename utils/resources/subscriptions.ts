@@ -37,13 +37,18 @@ export async function loadPlans(): Promise<Plan[]> {
   ];
 }
 
+export type PeriodMonths = 1 | 3 | 6 | 12;
+
 // Returns a Zarinpal StartPay URL to redirect to, or null when running in
 // mock mode (no real gateway) — the caller then applies a mock upgrade.
-export async function startPayment(planId: string): Promise<string | null> {
+export async function startPayment(
+  planId: string,
+  periodMonths: PeriodMonths = 1
+): Promise<string | null> {
   if (!apiEnabled) return null;
   const res = await apiFetch<{ paymentUrl: string }>('/subscriptions/pay/start/', {
     method: 'POST',
-    body: { planId },
+    body: { planId, periodMonths },
   });
   return res?.paymentUrl ?? null;
 }

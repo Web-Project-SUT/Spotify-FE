@@ -7,9 +7,17 @@ import AppShell from '../../components/AppShell';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Button, Badge, Card } from '../../components/ui';
-import { Plan, loadPlans, startPayment, applyMockUpgrade } from '../../utils/resources/subscriptions';
+import {
+  Plan,
+  PeriodMonths,
+  loadPlans,
+  startPayment,
+  applyMockUpgrade,
+} from '../../utils/resources/subscriptions';
 
 type PaymentResult = 'success' | 'failed' | 'cancelled' | null;
+
+const PERIOD_OPTIONS: PeriodMonths[] = [1, 3, 6, 12];
 
 function UpgradeContent() {
   const { user, refreshMe } = useAuth();
@@ -19,6 +27,7 @@ function UpgradeContent() {
 
   const [plans, setPlans] = useState<Plan[]>([]);
   const [busyTier, setBusyTier] = useState<string | null>(null);
+  const [periodMonths, setPeriodMonths] = useState<PeriodMonths>(1);
 
   const result = (params.get('payment') as PaymentResult) || null;
   const currentTier = user?.tier || 'basic';
@@ -43,7 +52,7 @@ function UpgradeContent() {
   const handleSubscribe = async (plan: Plan) => {
     setBusyTier(plan.tier);
     try {
-      const url = await startPayment(plan.id);
+      const url = await startPayment(plan.id, periodMonths);
       if (url) {
         // Real gateway: hand the browser to Zarinpal's StartPay page.
         window.location.href = url;
@@ -83,9 +92,29 @@ function UpgradeContent() {
         </div>
       )}
 
+      <div>
+        <p className="text-sm text-muted mb-2">{t('upgrade.periodLabel')}</p>
+        <div className="flex gap-2">
+          {PERIOD_OPTIONS.map((months) => (
+            <button
+              key={months}
+              onClick={() => setPeriodMonths(months)}
+              className={`px-4 py-2 rounded-full text-sm font-bold border transition ${
+                periodMonths === months
+                  ? 'bg-accent text-black border-accent'
+                  : 'border-border text-muted hover:text-white'
+              }`}
+            >
+              {t('upgrade.periodMonths', { count: months })}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         {plans.map((plan) => {
           const isCurrent = plan.tier === currentTier;
+          const total = plan.monthlyPrice * periodMonths;
           return (
             <Card key={plan.id} className="p-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -96,6 +125,11 @@ function UpgradeContent() {
                 ${plan.monthlyPrice.toFixed(2)}
                 <span className="text-muted text-base font-normal">/mo</span>
               </p>
+              {periodMonths > 1 && (
+                <p className="text-muted text-sm">
+                  {t('upgrade.total', { amount: total.toFixed(2) })}
+                </p>
+              )}
               <Button
                 className="w-full"
                 disabled={isCurrent || busyTier !== null}
