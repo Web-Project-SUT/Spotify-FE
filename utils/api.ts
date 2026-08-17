@@ -118,7 +118,14 @@ export async function apiRequest<T = unknown>(
       return { data: null, error: await readError(method, path, response) };
     }
     if (response.status === 204) return { data: null, error: null };
-    return { data: (await response.json()) as T, error: null };
+    try {
+      return { data: (await response.json()) as T, error: null };
+    } catch {
+      // Not every success carries a body: POST /users/{id}/follow/ answers
+      // 201 with Content-Length 0. Parsing that throws, and treating the
+      // throw as a failure would revert the UI on a write that worked.
+      return { data: null, error: null };
+    }
   } catch (cause) {
     const detail = cause instanceof Error ? cause.message : 'Network request failed.';
     return { data: null, error: failure(method, path, 0, detail) };

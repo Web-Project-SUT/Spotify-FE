@@ -82,6 +82,23 @@ describe('utils/api', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('treats an empty success body as success, not as a parse failure', async () => {
+    const { apiRequest } = await loadApi('http://api.test');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 201,
+        json: async () => {
+          throw new SyntaxError('Unexpected end of JSON input');
+        },
+      })
+    );
+
+    // POST /users/{id}/follow/ answers 201 with no body.
+    expect(await apiRequest('/users/u2/follow/', { method: 'POST' })).toEqual({ data: null, error: null });
+  });
+
   it('attaches Authorization: Bearer <token> when an access token is stored', async () => {
     const { apiFetch } = await loadApi('http://api.test');
     store.accessToken = 'access-123';
