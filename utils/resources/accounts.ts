@@ -246,3 +246,146 @@ export async function loadArtistSampleWorks(artistId: string): Promise<SampleWor
   const rows = await fetchAll<BackendSampleWork>(`/artists/${artistId}/sample-works/`);
   return rows.map((r) => ({ id: r.id, title: r.title, fileUrl: mediaUrl(r.file) }));
 }
+
+// ---- User management (admin) ---------------------------------------------
+
+// A row in the dashboard's Users tab. Admin-only, so unlike PublicProfile it
+// carries the email and account status an admin manages the account by.
+export interface ManagedUser {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  status: string;
+  tier: Tier;
+  createdAt?: string;
+}
+
+interface BackendManagedUser {
+  id: string;
+  email: string;
+  username: string;
+  displayName: string;
+  role: Role;
+  status: string;
+  tier: Tier;
+  createdAt: string;
+}
+
+function mapManagedUser(u: BackendManagedUser): ManagedUser {
+  return {
+    id: u.id,
+    email: u.email,
+    username: u.username || '',
+    displayName: u.displayName || '',
+    role: u.role,
+    status: u.status || 'active',
+    tier: u.tier || 'basic',
+    createdAt: u.createdAt,
+  };
+}
+
+// The whole roster (GET /users/, admin-gated). Mock mode reads the seeded
+// `users` collection so the offline demo still shows a populated table.
+export async function loadUsers(): Promise<ManagedUser[]> {
+  if (!apiEnabled) {
+    const users: User[] = getItem('users') || [];
+    return users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      username: u.username || '',
+      displayName: u.displayName || u.stageName || '',
+      role: u.role,
+      status: u.status || 'active',
+      tier: u.tier || 'basic',
+    }));
+  }
+  const rows = await fetchAll<BackendManagedUser>('/users/');
+  return rows.map(mapManagedUser);
+}
+
+export interface NewUser {
+  email: string;
+  password: string;
+  displayName?: string;
+  role: Role;
+  status?: string;
+}
+
+export interface UserMutationResult {
+  user: ManagedUser | null;
+  error: ApiError | null;
+}
+
+// POST /users/. Returns the ApiError so the form can show which field the
+// backend rejected instead of failing silently.
+export async function createUser(input: NewUser): Promise<UserMutationResult> {
+  if (!apiEnabled) {
+    const created: User = {
+      id: `u-${Date.now()}`,
+      email: input.email,
+      password: input.password,
+      role: input.role,
+      status: (input.status || 'active') as User['status'],
+      displayName: input.displayName,
+      tier: input.role === 'listener' ? 'basic' : undefined,
+    };
+    addRecord('users', created);
+    return {
+      user: {
+        id: created.id,
+        email: created.email,
+        username: '',
+        displayName: input.displayName || '',
+        role: input.role,
+        status: created.status || 'active',
+        tier: 'basic',
+      },
+      error: null,
+    };
+  }
+  const { data, error } = await apiRequest<BackendManagedUser>('/users/', {
+    method: 'POST',
+    body: {
+      email: input.email,
+      password: input.password,
+      displayName: input.displayName || '',
+      role: input.role,
+      status: input.status || 'active',
+    },
+  });
+  return { user: data ? mapManagedUser(data) : null, error };
+}
+
+// PATCH /users/{id}/ — the role/status editor. Promoting someone to `artist`
+// gets them an ArtistProfile server-side, so their tracks resolve a name.
+export async function updateUser(
+  userId: string,
+  changes: { role?: Role; status?: string; displayName?: string }
+): Promise<UserMutationResult> {
+  if (!apiEnabled) {
+    updateRecord('users', userId, changes as Partial<User>);
+    const users: User[] = getItem('users') || [];
+    const found = users.find((u) => u.id === userId);
+    return {
+      user: found
+        ? {
+            id: found.id,
+            email: found.email,
+            username: found.username || '',
+            displayName: found.displayName || found.stageName || '',
+            role: found.role,
+            status: found.status || 'active',
+            tier: found.tier || 'basic',
+          }
+        : null,
+      error: null,
+    };
+  }
+  const { data, error } = await apiRequest<BackendManagedUser>(`/users/${userId}/`, {
+    method: 'PATCH',
+    body: changes,
+  });
+  return { user: data ? mapManagedUser(data) : null, error };
+}

@@ -117,6 +117,55 @@ describe('accounts resource — mock mode', () => {
     const { loadArtistSampleWorks } = await import('./accounts');
     expect(await loadArtistSampleWorks('a1')).toEqual([]);
   });
+
+  it('loadUsers reads the seeded users collection', async () => {
+    vi.doMock('../localStorage', () => ({
+      getItem: (key: string) =>
+        key === 'users'
+          ? [
+              { id: 'u1', email: 'l@demo.com', role: 'listener', tier: 'gold', displayName: 'L' },
+              { id: 'a1', email: 'a@demo.com', role: 'artist', stageName: 'Nova' },
+            ]
+          : [],
+      addRecord: vi.fn(),
+      updateRecord: vi.fn(),
+    }));
+    const { loadUsers } = await import('./accounts');
+    const users = await loadUsers();
+    expect(users.map((u) => u.email)).toEqual(['l@demo.com', 'a@demo.com']);
+    expect(users[1].displayName).toBe('Nova');
+    vi.doUnmock('../localStorage');
+  });
+
+  it('createUser adds a local record and reports no error', async () => {
+    const addRecord = vi.fn();
+    vi.doMock('../localStorage', () => ({ getItem: () => [], addRecord, updateRecord: vi.fn() }));
+    const { createUser } = await import('./accounts');
+    const { user, error } = await createUser({
+      email: 'made@demo.com',
+      password: 'password123',
+      role: 'support',
+    });
+    expect(error).toBeNull();
+    expect(user?.email).toBe('made@demo.com');
+    expect(addRecord).toHaveBeenCalledWith('users', expect.objectContaining({ role: 'support' }));
+    vi.doUnmock('../localStorage');
+  });
+
+  it('updateUser writes the role change to the local record', async () => {
+    const updateRecord = vi.fn();
+    vi.doMock('../localStorage', () => ({
+      getItem: (key: string) =>
+        key === 'users' ? [{ id: 'u1', email: 'l@demo.com', role: 'artist' }] : [],
+      addRecord: vi.fn(),
+      updateRecord,
+    }));
+    const { updateUser } = await import('./accounts');
+    const { user } = await updateUser('u1', { role: 'artist' });
+    expect(updateRecord).toHaveBeenCalledWith('users', 'u1', { role: 'artist' });
+    expect(user?.role).toBe('artist');
+    vi.doUnmock('../localStorage');
+  });
 });
 
 describe('accounts resource — API mode', () => {
@@ -187,6 +236,98 @@ describe('accounts resource — API mode', () => {
     expect(opts.method).toBe('PATCH');
     expect(JSON.parse(opts.body)).toEqual({ email: 'taken@demo.com' });
     expect(error?.fields?.email?.[0]).toBe('Already taken.');
+  });
+
+  it('loadUsers walks the paginated roster', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          count: 1,
+          next: null,
+          previous: null,
+          results: [
+            {
+              id: 'u1',
+              email: 'l@demo.com',
+              username: 'l',
+              displayName: 'L',
+              role: 'listener',
+              status: 'active',
+              tier: 'gold',
+              createdAt: '2026-01-01T00:00:00Z',
+            },
+          ],
+        }),
+      })
+    );
+    const { loadUsers } = await import('./accounts');
+    const users = await loadUsers();
+    expect(users).toEqual([
+      {
+        id: 'u1',
+        email: 'l@demo.com',
+        username: 'l',
+        displayName: 'L',
+        role: 'listener',
+        status: 'active',
+        tier: 'gold',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+    ]);
+  });
+
+  it('createUser POSTs /users/ and surfaces the field errors', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => ({
+        detail: 'Invalid input.',
+        code: 'invalid',
+        fields: { email: ['Already taken.'] },
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { createUser } = await import('./accounts');
+    const { user, error } = await createUser({
+      email: 'taken@demo.com',
+      password: 'password123',
+      role: 'listener',
+    });
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://backend.test/api/users/');
+    expect(opts.method).toBe('POST');
+    expect(user).toBeNull();
+    expect(error?.fields?.email?.[0]).toBe('Already taken.');
+  });
+
+  it('updateUser PATCHes the role and returns the updated row', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        id: 'u1',
+        email: 'l@demo.com',
+        username: 'l',
+        displayName: 'L',
+        role: 'artist',
+        status: 'active',
+        tier: 'basic',
+        createdAt: '2026-01-01T00:00:00Z',
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const { updateUser } = await import('./accounts');
+    const { user, error } = await updateUser('u1', { role: 'artist' });
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://backend.test/api/users/u1/');
+    expect(opts.method).toBe('PATCH');
+    expect(JSON.parse(opts.body)).toEqual({ role: 'artist' });
+    expect(error).toBeNull();
+    expect(user?.role).toBe('artist');
   });
 
   it('deleteMe DELETEs /auth/me/ and reports the outcome', async () => {
