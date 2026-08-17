@@ -28,7 +28,9 @@ function AlbumContent() {
       const found = albums.find((a) => a.id === params.id) || null;
       setAlbum(found);
       if (found) {
-        setTracks(songs.filter((s) => s.artistId === found.artistId));
+        // The album's own tracks — not the artist's whole catalog, which is
+        // what an artistId match returns once an artist has more than one album.
+        setTracks(songs.filter((s) => s.albumId === found.id));
         setArtistName(artistMap[found.artistId] || 'Unknown artist');
       }
     })();
